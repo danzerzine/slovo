@@ -30,6 +30,7 @@ def signals(src, new):
     out = [f"потеряно {x}" for x in sorted(check.facts(src) - check.facts(new))]
     out += [f"новое {x}" for x in sorted(check.facts(new) - check.facts(src))]
     out += [f"единица {x}" for x in check.unit_changes(src, new)]
+    out += [f"тире {k}" for k, v in check.dash_loss(src, new)[0].items() if v]
     out += [n for _, notes in check.marker_shifts(src, new) for n in notes]
     return out
 
@@ -66,6 +67,24 @@ def run_cases():
     return failed
 
 
+def run_share():
+    """Rewritten share counts sentences rewritten in earnest, not commas or one swapped word."""
+    src = "Мы сравнили три версии спада и ни одна его не объясняет. Данные взяли за май у всех клиентов. " \
+          "Отчёт собрали вручную и проверили дважды. Вопросы остались только по возвратам."
+    light = "Мы сравнили три версии спада, и ни одна его не объясняет. Данные взяли за май у всех клиентов. " \
+            "Отчёт собрали вручную и проверили два раза. Вопросы остались только по возвратам."
+    heavy = "Ни одна из трёх версий не объясняет спад. Майские данные охватывают всех клиентов. " \
+            "Ручная сборка отчёта прошла двойную проверку. Открытыми остаются лишь возвраты."
+    cases = [("запятая и одно слово", light, lambda x: x == 0), ("пересказ", heavy, lambda x: x == 1)]
+    failed = 0
+    for name, new, ok in cases:
+        share = check.changed_share(src, new)
+        good = ok(share)
+        failed += not good
+        print(f"доля: {name:<20} {100 * share:.0f} % {'ок' if good else 'ПРОВАЛ'}")
+    return failed
+
+
 def folder_pairs(folder):
     for orig in sorted(Path(folder).glob("*.orig.md")):
         new_path = orig.with_name(orig.name[: -len(".orig.md")] + ".new.md")
@@ -85,7 +104,7 @@ def run_pairs(pairs):
     for name, src, new in pairs:
         n += 1
         bad = (check.facts(src) - check.facts(new)) or (check.facts(new) - check.facts(src)) \
-            or check.unit_changes(src, new)
+            or check.unit_changes(src, new) or any(check.dash_loss(src, new)[0].values())
         hard += bool(bad)
         places += len(check.marker_shifts(src, new))
         if bad:
@@ -100,7 +119,7 @@ def main():
     ap.add_argument("--repo", help="git repo whose --commit holds accepted rewrites (parent = sources)")
     ap.add_argument("--commit", help="commit with accepted rewrites, used with --repo")
     args = ap.parse_args()
-    failed = run_cases()
+    failed = run_cases() + run_share()
     if args.pairs:
         failed += run_pairs(folder_pairs(args.pairs))
     if args.repo and args.commit:

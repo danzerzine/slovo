@@ -2,8 +2,9 @@
 
 Usage: python3 check.py source.md rewrite.md [--glossary glossary.md]
 Exit code 1 (hard stop) if a number, code, link or `fragment` was lost; if a new one appeared that is
-in neither the source nor the glossary; if a number changed its unit (5 % → 5 п. п.); or if dashes
-disappeared. Everything else is a warning: a place to reread against the source, not a verdict.
+in neither the source nor the glossary; if a number changed its unit (5 % → 5 п. п.); or if a dash
+disappeared from text that is still there (a dash that left with a wholly deleted sentence is a
+warning). Everything else is a warning: a place to reread against the source, not a verdict.
 """
 
 import argparse
@@ -242,7 +243,7 @@ def marker_shifts(src, new):
         for n in sorted(set(uo) & set(un)):
             if uo[n] != un[n] and not uo[n] <= un[n]:
                 notes.append(f"число сменило единицу: {n} {'/'.join(sorted(uo[n]))} → {n} {'/'.join(sorted(un[n]))}")
-        if dashes(cur)["—"] < dashes(old)["—"] or dashes(cur)["–"] < dashes(old)["–"]:
+        if op != "delete" and (dashes(cur)["—"] < dashes(old)["—"] or dashes(cur)["–"] < dashes(old)["–"]):
             notes.append("в этом месте пропало тире: проверь, удалена ли фраза целиком")
         for b in split_hedges(ss[i1:i2], sn[j1:j2]):
             notes.append(f"оговорка осталась в соседней фразе, а эта читается как факт: «{b[:60]}…»")
@@ -251,13 +252,40 @@ def marker_shifts(src, new):
     return out
 
 
-def changed_share(src, new):
+def similar(a, b):
+    wa, wb = re.findall(r"\w+", a.lower()), re.findall(r"\w+", b.lower())
+    return difflib.SequenceMatcher(None, wa, wb, autojunk=False).ratio()
+
+
+def changed_share(src, new, keep=0.75):
+    """Share of source sentences rewritten in earnest: deleted, or whose closest
+    counterpart in the rewrite shares less than `keep` of its words. A comma or one
+    swapped word leaves a sentence counted as kept."""
     ss, sn = sentences(src), sentences(new)
     if not ss:
         return 0.0
     sm = difflib.SequenceMatcher(None, ss, sn, autojunk=False)
-    kept = sum(b.size for b in sm.get_matching_blocks())
-    return 1 - kept / len(ss)
+    changed = 0
+    for op, i1, i2, j1, j2 in sm.get_opcodes():
+        if op == "equal":
+            continue
+        for s in ss[i1:i2]:
+            if max((similar(s, t) for t in sn[j1:j2]), default=0) < keep:
+                changed += 1
+    return changed / len(ss)
+
+
+def dash_loss(src, new):
+    """Dashes lost overall, minus those that left with wholly deleted sentences."""
+    ds, dn = dashes(src), dashes(new)
+    ss, sn = sentences(src), sentences(new)
+    gone = {"—": 0, "–": 0}
+    for op, i1, i2, _, _ in difflib.SequenceMatcher(None, ss, sn, autojunk=False).get_opcodes():
+        if op == "delete":
+            for k, v in dashes(" ".join(ss[i1:i2])).items():
+                gone[k] += v
+    total = {k: max(ds[k] - dn[k], 0) for k in ds}
+    return {k: max(total[k] - gone[k], 0) for k in ds}, {k: min(total[k], gone[k]) for k in ds}
 
 
 def unit_changes(src, new):
@@ -283,6 +311,7 @@ def main():
     fewer = sorted((number_counts(src) - number_counts(new)).items())
     unit_swaps = unit_changes(src, new)
     ds, dn = dashes(src), dashes(new)
+    dash_lost, dash_gone = dash_loss(src, new)
     ls, ln = ([len(s.split()) for s in sentences(t)] for t in (src, new))
     ws, wn = len(src.split()), len(new.split())
     (sum_s, body_s), (sum_n, body_n) = summary_split(src), summary_split(new)
@@ -296,7 +325,7 @@ def main():
     print(f"тире: было {ds}, стало {dn}")
     print(f"длина: {ws} → {wn} слов ({100 * (wn - ws) / max(ws, 1):+.0f} %); "
           f"сводка {len(sum_s.split())} → {len(sum_n.split())}")
-    print(f"переписано фраз вне сводки: {100 * share:.0f} %")
+    print(f"переписано фраз вне сводки (сходство слов < 75 %): {100 * share:.0f} %")
     print(f"датчики (не цель): разброс длин фраз {cv(ls):.2f} → {cv(ln):.2f}; "
           f"фраз длиннее 30 слов {long_s} → {long_n}; номинализаций-кандидатов {ks} → {kn}")
 
@@ -315,10 +344,12 @@ def main():
         warn.append("разброс длин фраз упал: перечитай, не выровнялся ли текст (не чини короткими фразами)")
     if long_n > long_s:
         warn.append("длинных фраз стало больше: перечитай их, разбивай только непрозрачные")
+    if any(dash_gone.values()):
+        warn.append(f"тире ушли вместе с удалёнными фразами: {dash_gone} — проверь, что фразы удалены по делу")
     for w in warn:
         print(f"внимание: {w}")
 
-    bad = lost or added or unit_swaps or dn["—"] < ds["—"] or dn["–"] < ds["–"]
+    bad = lost or added or unit_swaps or any(dash_lost.values())
     sys.exit(1 if bad else 0)
 
 
