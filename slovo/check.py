@@ -246,6 +246,18 @@ def stops_restored(src, new):
     return proofread_only(src, new) and commas(new) >= commas(src)
 
 
+TEM_NE_MENEE = re.compile(r"\bтем\s+не\s+менее\b", re.I)
+# a word mixing Cyrillic and Latin letters: «ХХ» typed in Cyrillic next to «XIX», «Сasio», «МТV»
+MIXED = re.compile(r"\b(?=\w*[А-Яа-яЁё])(?=\w*[A-Za-z])[A-Za-zА-Яа-яЁё]+\b")
+
+
+def mixed_script(text):
+    """Words that mix alphabets, plus Roman numerals typed with Cyrillic letters; both look right and are wrong."""
+    words = MIXED.findall(text)
+    words += [w for w in re.findall(r"\b[IVXLХ]{2,}\b", text) if "Х" in w]
+    return sorted(set(words))
+
+
 def unglue_particles(text):
     """«Было-бы» is a misspelt «было бы», not a new «бы»; «только-только» is still two «только»;
     «из за» is «из-за»."""
@@ -350,7 +362,9 @@ def marker_shifts(src, new):
                 minus = []  # the whole sentence is gone, not flipped
             glued = glued_negations(old, cur)
             if k == "отрицание":
-                for _ in glued:
+                # «тем не менее» is a connective, not a negation: dropping it flips nothing
+                idiom = len(TEM_NE_MENEE.findall(old)) - len(TEM_NE_MENEE.findall(cur))
+                for _ in [*glued, *range(max(idiom, 0))]:
                     if "не" in minus:
                         minus.remove("не")
             elif glued:
@@ -516,6 +530,10 @@ def main():
     if hn < hs:
         warn.append(f"дефис с пробелами вместо тире пропал ({hs} → {hn}): тире автора — верни как было; "
                     "опечатка в слове («маркет - плейс») — правку оставь")
+    mixed = mixed_script(new)
+    if mixed:
+        warn.append(f"слова со смешанным алфавитом (латиница в русском слове или кириллица в латинском, "
+                    f"римская цифра кириллицей): {mixed[:20]} — чаще всего это опечатка набора, исправь; игру слов («Deadушки») оставь")
     for w in warn:
         print(f"внимание: {w}")
 
