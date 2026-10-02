@@ -88,7 +88,8 @@ def norm_num(n):
 
 
 def facts(text):
-    out = set(re.findall(r"`([^`]+)`", text))
+    out = {b.strip() for b in re.findall(r"```(.*?)```", text, flags=re.S)}  # a fenced block is one fact
+    out |= set(re.findall(r"`([^`\n]+)`", strip_code(text)))  # inline code, with fences out of the way
     out |= set(re.findall(r"\]\(([^)]+)\)", text))
     out |= {norm_num(n) for n in NUMBER.findall(text)}
     out |= set(CODE.findall(text))
