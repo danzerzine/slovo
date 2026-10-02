@@ -1,6 +1,7 @@
 """Regression tests for check.py on editing accidents taken from a real rewrite of analytical reports.
 
-Each case in cases.json: the bad rewrite must raise a signal, the good one must not.
+Each case in cases.json: the bad rewrite must raise a signal, the good one must not. A case with no
+«bad» is a false-positive guard: an honest rewrite that must stay clean.
 Cases in tests/cases.local.json (git-ignored) run too, if the file exists.
 Cases marked known_miss are meaning shifts check.py cannot see (left to the cold check);
 they are reported, not failed, and a known miss that starts to be caught is reported too.
@@ -48,7 +49,8 @@ def run_cases():
         cases += json.loads(local.read_text(encoding="utf-8"))
     for c in cases:
         src = doc(c, c["source"])
-        bad, good = signals(src, doc(c, c["bad"])), signals(src, doc(c, c["good"]))
+        good = signals(src, doc(c, c["good"]))
+        bad = signals(src, doc(c, c["bad"])) if "bad" in c else ["(нет плохой правки)"]
         miss = c.get("known_miss", False)
         if good:
             status, failed = "ПРОВАЛ: хорошая правка помечена", failed + 1

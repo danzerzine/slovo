@@ -5,7 +5,9 @@ Exit code 1 (hard stop) if a number, code, link or `fragment` was lost; if a new
 in neither the source nor the glossary; if a number changed its unit (5 % → 5 п. п.); or if a dash
 disappeared from prose that is still there (a dash that left with a wholly deleted sentence, a
 heading or a table cell is a warning; so is «3» → «три» or «в 2 раза» → «вдвое»). Under 150 words the
-length and rewrite thresholds are not applied. Everything else is a warning: a place to reread against the source, not a verdict.
+length and rewrite thresholds are not applied; --genre article lowers the rewrite threshold from a half
+to a third; --shortened (the author asked to cut) drops the thresholds and lets a number leave with a
+wholly deleted sentence as a warning. Everything else is a warning: a place to reread against the source, not a verdict.
 """
 
 import argparse
@@ -46,9 +48,14 @@ KANTS = re.compile(
 NUMBER = re.compile(r"(?<![\w.])\d{1,3}(?:[  ]\d{3})+(?:[.,]\d+)?|(?<![\w.])\d+(?:[.,:]\d+)*")
 # A number with the unit that changes its meaning. Dates (25.09) are not numbers with units.
 UNIT = re.compile(r"(?<![\w.])(\d{1,3}(?:[  ]\d{3})+(?:,\d+)?|\d+(?:,\d+)?)(?![.\d])\s?"
-                  r"(%|п\.\s?п\.|процентн\w*\s+пункт\w*|раза?\b|млн|млрд|тыс\.?|мс\b)", re.I)
+                  r"(%|п\.\s?п\.|процентн\w*\s+пункт\w*|раза?\b|млн|млрд|тыс\.?|мс\b|₽|руб\w*|коп\w*|\$|€|"
+                  r"долл\w*|евро\b|чел\w*|сек\w*|с\b|мин\w*|ч\b|час\w*|сут\w*|дн\w*|день|недел\w*|нед\.|"
+                  r"мес\w*|год\w*|лет\b|г\.)", re.I)
+# Order matters: the first prefix that fits names the unit («чел» before «ч», «мс» before «м…»).
 UNIT_NAME = {"п.п.": "п. п.", "проц": "п. п.", "раз": "раз", "млн": "млн", "млрд": "млрд", "тыс": "тыс.",
-             "мс": "мс", "%": "%"}
+             "мс": "мс", "%": "%", "₽": "₽", "руб": "₽", "коп": "коп.", "$": "$", "долл": "$", "€": "€",
+             "евро": "€", "чел": "чел.", "сек": "с", "с": "с", "мин": "мин", "час": "ч", "ч": "ч", "сут": "дн.",
+             "дн": "дн.", "день": "дн.", "нед": "нед.", "мес": "мес.", "год": "год", "лет": "год", "г.": "год"}
 CODE = re.compile(r"(?<!\w)[A-ZА-ЯЁ]{1,4}\d+[a-zа-я0-9-]*(?!\w)")
 # A number written as a word: «3 месяца» → «три месяца», «в 2 раза» → «вдвое» keeps the fact.
 NUMBER_WORDS = {
@@ -291,7 +298,7 @@ def marker_shifts(src, new):
             notes.append(f"новые числа {sorted(new_nums)}")
         uo, un = units(old), units(cur)
         for n in sorted(set(uo) & set(un)):
-            if uo[n] != un[n] and not uo[n] <= un[n]:
+            if un[n] - uo[n]:  # a new unit for this number; a dropped one is a lost or respelled number
                 notes.append(f"число сменило единицу: {n} {'/'.join(sorted(uo[n]))} → {n} {'/'.join(sorted(un[n]))}")
         if op != "delete" and (dashes(cur)["—"] < dashes(old)["—"] or dashes(cur)["–"] < dashes(old)["–"]):
             notes.append("в этом месте пропало тире: проверь, удалена ли фраза целиком")
@@ -340,6 +347,13 @@ def dash_loss(src, new):
     return {k: max(total[k] - gone[k], 0) for k in ds}, {k: min(total[k], gone[k]) for k in ds}
 
 
+def deleted_text(src, new):
+    """Sentences of the source that the rewrite dropped whole (not rewritten, not merged)."""
+    ss, sn = sentences(src), sentences(new)
+    ops = difflib.SequenceMatcher(None, ss, sn, autojunk=False).get_opcodes()
+    return " ".join(" ".join(ss[i1:i2]) for op, i1, i2, _, _ in ops if op == "delete")
+
+
 def unit_changes(src, new):
     """Numbers whose unit changed anywhere: 5 % in the source, only 5 п. п. in the rewrite."""
     us, un = units(src), units(new)
@@ -353,6 +367,12 @@ def main():
     ap.add_argument("rewrite")
     ap.add_argument("--glossary", action="append", default=[],
                     help="glossary or other project file a gloss may quote numbers from")
+    ap.add_argument("--genre", choices=["report", "article"], default="report",
+                    help="report: up to half of the sentences outside the summary may be rewritten; "
+                         "article (also column, newsletter, interview): up to a third")
+    ap.add_argument("--shortened", action="store_true",
+                    help="the author asked to cut or restructure: no length or share thresholds, and a number "
+                         "that left with a wholly deleted sentence is a warning, not a stop")
     args = ap.parse_args()
     src, new = (open(p, encoding="utf-8").read() for p in (args.source, args.rewrite))
     allowed = facts(src)
@@ -360,6 +380,8 @@ def main():
         allowed |= facts(open(g, encoding="utf-8").read())
     respelled = spelled(src, new)
     lost = sorted(facts(src) - facts(new) - respelled)
+    cut = sorted(set(lost) & facts(deleted_text(src, new))) if args.shortened else []
+    lost = [x for x in lost if x not in cut]
     added = sorted(facts(new) - allowed - respelled)
     fewer = sorted((number_counts(src) - number_counts(new)).items())
     fewer = [(n, c) for n, c in fewer if n not in respelled]
@@ -374,6 +396,8 @@ def main():
     ks, kn = len(KANTS.findall(strip_code(src))), len(KANTS.findall(strip_code(new)))
 
     print(f"потеряно: {len(lost)} {lost[:40]}")
+    if args.shortened:
+        print(f"ушло вместе с удалёнными фразами: {len(cut)} {cut[:40]}")
     print(f"новое (нет ни в исходнике, ни в глоссарии): {len(added)} {added[:40]}")
     print(f"число сменило единицу: {len(unit_swaps)} {unit_swaps[:20]}")
     print(f"тире: было {ds}, стало {dn}")
@@ -391,6 +415,8 @@ def main():
 
     warn = []
     short = ws < 150
+    free = short or args.shortened
+    limit, limit_name = (1 / 3, "трети") if args.genre == "article" else (0.5, "половины")
     if respelled:
         warn.append(f"число сменило запись (цифра ↔ слово): {sorted(respelled, key=int)} — проверь, что значение то же")
     if fewer:
@@ -399,12 +425,15 @@ def main():
     if short:
         warn.append("короткий текст (меньше 150 слов): пороги длины и доли не считаются; сверь каждое число, "
                     "имя и оговорку сам")
-    if not short and ws and abs(wn - ws) / ws > 0.15:
+    if cut:
+        warn.append(f"числа ушли вместе с удалёнными фразами: {cut[:20]} — проверь, что мысль ушла целиком, "
+                    "а не потеряла цифру")
+    if not free and ws and abs(wn - ws) / ws > 0.15:
         warn.append("длина изменилась больше чем на 15 %: пересказ или дописывание? объясни или откати")
-    if not short and sws and abs(swn - sws) / sws > 0.25:
+    if not free and sws and abs(swn - sws) / sws > 0.25:
         warn.append("сводка изменилась больше чем на 25 %: объясни или откати")
-    if not short and share > 0.5:
-        warn.append("переписано больше половины фраз вне сводки: это пересказ, а не правка; объясни или откати")
+    if not free and share > limit:
+        warn.append(f"переписано больше {limit_name} фраз вне сводки: это пересказ, а не правка; объясни или откати")
     if ln and cv(ln) < cv(ls) - 0.05:
         warn.append("разброс длин фраз упал: перечитай, не выровнялся ли текст (не чини короткими фразами)")
     if long_n > long_s:
