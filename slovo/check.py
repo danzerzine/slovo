@@ -445,6 +445,13 @@ def main():
         print(f"внимание: {w}")
 
     bad = lost or added or unit_swaps or any(dash_lost.values())
+    if bad:
+        print("\nитог: СТОП (код 1) — потеря или подмена из строк выше, чини и запусти снова")
+    elif warn or shifts:
+        print("\nитог: стопа нет (код 0). «внимание» и «сверить» — места перечитать, а не приказ откатить: "
+              "правку, сделанную по делу, оставь")
+    else:
+        print("\nитог: стопа нет (код 0)")
     sys.exit(1 if bad else 0)
 
 
