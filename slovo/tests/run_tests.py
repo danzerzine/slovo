@@ -88,6 +88,23 @@ def run_share():
     return failed
 
 
+def run_rhythm():
+    """Putting back missing stops is not flattening the rhythm; chopping a long sentence at its commas is."""
+    src = "Дело было в 2004 году, работал я электромонтёром. Устроился к нам водитель, назовём его Алёша.После " \
+          "первой зарплаты начал сравнивать расчётки у себя и у нас, и у нас почти вдвое больше. Спрашиваю, " \
+          "есть ли у него профильное образование, а он говорит, что есть, ПТУ, электромонтёр, и смотрит на меня."
+    fixed = src.replace("Алёша.После", "Алёша. После")
+    chop = src.replace("Спрашиваю, есть ли у него профильное образование, а он говорит, что есть, ПТУ,",
+                       "Спрашиваю. Есть ли у него профильное образование? Он говорит. Есть. ПТУ.")
+    cases = [("вернули точку", fixed, True), ("разрубили по запятым", chop, False)]
+    failed = 0
+    for name, new, quiet in cases:
+        good = check.stops_restored(src, new) == quiet
+        failed += not good
+        print(f"ритм: {name:<22} {'ок' if good else 'ПРОВАЛ'}")
+    return failed
+
+
 def folder_pairs(folder):
     for orig in sorted(Path(folder).glob("*.orig.md")):
         new_path = orig.with_name(orig.name[: -len(".orig.md")] + ".new.md")
@@ -122,7 +139,7 @@ def main():
     ap.add_argument("--repo", help="git repo whose --commit holds accepted rewrites (parent = sources)")
     ap.add_argument("--commit", help="commit with accepted rewrites, used with --repo")
     args = ap.parse_args()
-    failed = run_cases() + run_share()
+    failed = run_cases() + run_share() + run_rhythm()
     if args.pairs:
         failed += run_pairs(folder_pairs(args.pairs))
     if args.repo and args.commit:

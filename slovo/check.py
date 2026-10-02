@@ -8,6 +8,8 @@ heading or a table cell is a warning; so is «3» → «три» or «в 2 ра�
 length and rewrite thresholds are not applied; --genre article lowers the rewrite threshold from a half
 to a third; --shortened (the author asked to cut) drops the thresholds and lets a number leave with a
 wholly deleted sentence as a warning. Everything else is a warning: a place to reread against the source, not a verdict.
+A proofread stays quiet: «Было-бы» → «было бы», «не велик» → «невелик» and a stop put back between two glued
+sentences raise nothing.
 """
 
 import argparse
@@ -147,8 +149,13 @@ def table_heading_lines(text):
     return "\n".join(s for s in (ln.strip() for ln in strip_code(text).splitlines()) if s.startswith(("|", "#")))
 
 
+# Two sentences glued without a space («Алёша.После») are two sentences: a proofread that adds the space
+# must not read as a split. Three letters before the stop keep «ул.Ленина» and «т.Е» whole.
+GLUED_STOP = r"|(?<=[^\W\d_]{3}[.!?…])(?=[A-ZА-ЯЁ])"
+
+
 def sentences(text):
-    parts = re.split(r"(?<=[.!?…])\s+(?=[«\"(A-ZА-ЯЁ])", " ".join(prose_lines(text)))
+    parts = re.split(r"(?<=[.!?…])\s+(?=[«\"(A-ZА-ЯЁ])" + GLUED_STOP, " ".join(prose_lines(text)))
     return [p for p in parts if len(p.split()) >= 2]
 
 
@@ -198,6 +205,35 @@ def stem(word):
     w = re.sub(r"\s+", " ", word.lower().replace("ё", "е"))
     w = w if len(w) <= 4 else w[:4]
     return SAME.get(w, w)
+
+
+def words_only(text):
+    return re.findall(r"\w+", text.lower().replace("ё", "е"))
+
+
+def proofread_only(src, new):
+    """Spelling, commas, spaces and capitals only: the words are the same once glued words are split
+    and split ones glued («Алёша.После», «не велик» → «невелик», «Было-бы» → «Было бы»)."""
+    a, b = "".join(words_only(src)), "".join(words_only(new))
+    return difflib.SequenceMatcher(None, a, b, autojunk=False).ratio() >= 0.98
+
+
+def stops_restored(src, new):
+    """Rhythm fell only because missing stops were put back: same words, and no comma became a stop.
+    A long sentence chopped at its commas keeps its words too, so it still warns."""
+    commas = lambda s: len(re.findall(r"[,;:]", s))
+    return proofread_only(src, new) and commas(new) >= commas(src)
+
+
+def unglue_particles(text):
+    """«Было-бы» is a misspelt «было бы», not a new «бы»."""
+    return re.sub(r"(?<=\w)-(?=(?:бы|ли|же)(?![\w-]))", " ", text, flags=re.I)
+
+
+def glued_negations(old, cur):
+    """«не велик» → «невелик» joins «не» to its word; the negation is still there."""
+    return sum(1 for w in re.findall(r"(?<![\w-])не\s+(\w+)", old, re.I)
+               if re.search(rf"(?<![\w-])не{re.escape(w)}(?!\w)", cur, re.I))
 
 
 def markers(text):
@@ -278,7 +314,7 @@ def marker_shifts(src, new):
             continue
         old, cur = " ".join(ss[i1:i2]), " ".join(sn[j1:j2])
         line = line_of(new, sn[j1]) if j1 < j2 else 0
-        mo, mn = markers(old), markers(cur)
+        mo, mn = markers(unglue_particles(old)), markers(unglue_particles(cur))
         notes = []
         for k, (_, direction) in MARKERS.items():
             plus = [st for st in (mn[k] - mo[k]) if not said_in_source(cur, k, st, src_bi)]
@@ -287,6 +323,10 @@ def marker_shifts(src, new):
             minus = list((mo[k] - mn[k]).elements())
             if k in ("отрицание", "сужение") and op == "delete":
                 minus = []  # the whole sentence is gone, not flipped
+            if k == "отрицание":
+                for _ in range(glued_negations(old, cur)):
+                    if "не" in minus:
+                        minus.remove("не")
             if plus and direction in "+±":
                 where = around(cur, k, plus[0])
                 line = line_of(new, where) or line
@@ -369,7 +409,7 @@ def main():
                     help="glossary or other project file a gloss may quote numbers from")
     ap.add_argument("--genre", choices=["report", "article"], default="report",
                     help="report: up to half of the sentences outside the summary may be rewritten; "
-                         "article (also column, newsletter, interview): up to a third")
+                         "article (also column, newsletter, interview, post): up to a third")
     ap.add_argument("--shortened", action="store_true",
                     help="the author asked to cut or restructure: no length or share thresholds, and a number "
                          "that left with a wholly deleted sentence is a warning, not a stop")
@@ -434,7 +474,7 @@ def main():
         warn.append("сводка изменилась больше чем на 25 %: объясни или откати")
     if not free and share > limit:
         warn.append(f"переписано больше {limit_name} фраз вне сводки: это пересказ, а не правка; объясни или откати")
-    if ln and cv(ln) < cv(ls) - 0.05:
+    if ln and cv(ln) < cv(ls) - 0.05 and not stops_restored(src, new):
         warn.append("разброс длин фраз упал: перечитай, не выровнялся ли текст (не чини короткими фразами)")
     if long_n > long_s:
         warn.append("длинных фраз стало больше: перечитай их, разбивай только непрозрачные")
