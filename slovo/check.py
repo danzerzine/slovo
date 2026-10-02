@@ -3,8 +3,9 @@
 Usage: python3 check.py source.md rewrite.md [--glossary glossary.md]
 Exit code 1 (hard stop) if a number, code, link or `fragment` was lost; if a new one appeared that is
 in neither the source nor the glossary; if a number changed its unit (5 % → 5 п. п.); or if a dash
-disappeared from text that is still there (a dash that left with a wholly deleted sentence is a
-warning). Everything else is a warning: a place to reread against the source, not a verdict.
+disappeared from prose that is still there (a dash that left with a wholly deleted sentence, a
+heading or a table cell is a warning; so is «3» → «три» or «в 2 раза» → «вдвое»). Under 150 words the
+length and rewrite thresholds are not applied. Everything else is a warning: a place to reread against the source, not a verdict.
 """
 
 import argparse
@@ -45,6 +46,22 @@ UNIT = re.compile(r"(?<![\w.])(\d{1,3}(?:[  ]\d{3})+(?:,\d+)?|\d+(?:,\d+)?)(?![.
 UNIT_NAME = {"п.п.": "п. п.", "проц": "п. п.", "раз": "раз", "млн": "млн", "млрд": "млрд", "тыс": "тыс.",
              "мс": "мс", "%": "%"}
 CODE = re.compile(r"(?<!\w)[A-ZА-ЯЁ]{1,4}\d+[a-zа-я0-9-]*(?!\w)")
+# A number written as a word: «3 месяца» → «три месяца», «в 2 раза» → «вдвое» keeps the fact.
+NUMBER_WORDS = {
+    "1": r"один|одна|одно|одного|одной|одному|одну|одним|одном",
+    "2": r"два|две|двух|двум|двумя|вдвое|дважды",
+    "3": r"три|трёх|трех|трём|трем|тремя|втрое|трижды",
+    "4": r"четыре|четырёх|четырех|четырём|четырем|четырьмя|вчетверо",
+    "5": r"пять|пяти|пятью|впятеро",
+    "6": r"шесть|шести|шестью|вшестеро",
+    "7": r"семь|семи|семью",
+    "8": r"восемь|восьми|восемью",
+    "9": r"девять|девяти|девятью",
+    "10": r"десять|десяти|десятью|вдесятеро",
+    "100": r"сто|ста",
+    "1000": r"тысяча|тысячи|тысячу|тысячей|тысяч",
+}
+NUMBER_WORD_RE = {n: re.compile(rf"(?<![\w-])(?:{v})(?![\w-])", re.I) for n, v in NUMBER_WORDS.items()}
 
 
 def strip_code(text):
@@ -83,6 +100,26 @@ def number_counts(text):
     return Counter(norm_num(n) for n in NUMBER.findall(strip_code(text)))
 
 
+def spelled(src, new):
+    """Numbers that only changed form: a digit lost while its word appeared, or the other way round."""
+    out = set()
+    for n, rx in NUMBER_WORD_RE.items():
+        ws, wn = len(rx.findall(strip_code(src))), len(rx.findall(strip_code(new)))
+        cs, cn = number_counts(src)[n], number_counts(new)[n]
+        if (cs > cn and wn > ws) or (cn > cs and ws > wn):
+            out.add(n)
+    return out
+
+
+def multiples(text):
+    """Values of «в 2 раза», «в два раза», «вдвое»: a multiplier only changed in form is not a new one."""
+    out = set()
+    for m in MARKER_RE["кратность"].findall(text):
+        d = re.search(r"\d+(?:[.,]\d+)?", m)
+        out |= {norm_num(d.group())} if d else {n for n, rx in NUMBER_WORD_RE.items() if rx.search(m)}
+    return out
+
+
 def dashes(text):
     return {"—": text.count("—"), "–": text.count("–")}
 
@@ -92,6 +129,10 @@ def prose_lines(text):
         s = line.strip()
         if s and not s.startswith(("|", "#", ">")):
             yield re.sub(r"^[-*\d.]+\s+", "", s)
+
+
+def table_heading_lines(text):
+    return "\n".join(s for s in (ln.strip() for ln in strip_code(text).splitlines()) if s.startswith(("|", "#")))
 
 
 def sentences(text):
@@ -229,6 +270,8 @@ def marker_shifts(src, new):
         notes = []
         for k, (_, direction) in MARKERS.items():
             plus = [st for st in (mn[k] - mo[k]) if not said_in_source(cur, k, st, src_bi)]
+            if k == "кратность" and multiples(cur) <= multiples(old):
+                plus = []
             minus = list((mo[k] - mn[k]).elements())
             if plus and direction in "+±":
                 where = around(cur, k, plus[0])
@@ -276,10 +319,12 @@ def changed_share(src, new, keep=0.75):
 
 
 def dash_loss(src, new):
-    """Dashes lost overall, minus those that left with wholly deleted sentences."""
+    """Dashes lost overall, minus those that left with wholly deleted sentences or from headings and
+    tables (a rewritten heading or cell is a place to reread, not a hard stop)."""
     ds, dn = dashes(src), dashes(new)
     ss, sn = sentences(src), sentences(new)
-    gone = {"—": 0, "–": 0}
+    ts, tn = dashes(table_heading_lines(src)), dashes(table_heading_lines(new))
+    gone = {k: max(ts[k] - tn[k], 0) for k in ts}
     for op, i1, i2, _, _ in difflib.SequenceMatcher(None, ss, sn, autojunk=False).get_opcodes():
         if op == "delete":
             for k, v in dashes(" ".join(ss[i1:i2])).items():
@@ -306,9 +351,11 @@ def main():
     allowed = facts(src)
     for g in args.glossary:
         allowed |= facts(open(g, encoding="utf-8").read())
-    lost = sorted(facts(src) - facts(new))
-    added = sorted(facts(new) - allowed)
+    respelled = spelled(src, new)
+    lost = sorted(facts(src) - facts(new) - respelled)
+    added = sorted(facts(new) - allowed - respelled)
     fewer = sorted((number_counts(src) - number_counts(new)).items())
+    fewer = [(n, c) for n, c in fewer if n not in respelled]
     unit_swaps = unit_changes(src, new)
     ds, dn = dashes(src), dashes(new)
     dash_lost, dash_gone = dash_loss(src, new)
@@ -336,21 +383,28 @@ def main():
             print(f"  стр. {line}: " + "; ".join(notes))
 
     warn = []
+    short = ws < 150
+    if respelled:
+        warn.append(f"число сменило запись (цифра ↔ слово): {sorted(respelled, key=int)} — проверь, что значение то же")
     if fewer:
         warn.append(f"число встречается реже, чем в исходнике: {fewer[:10]} — убран повтор или факт?")
     sws, swn = len(sum_s.split()), len(sum_n.split())
-    if ws and abs(wn - ws) / ws > 0.15:
+    if short:
+        warn.append("короткий текст (меньше 150 слов): пороги длины и доли не считаются; сверь каждое число, "
+                    "имя и оговорку сам")
+    if not short and ws and abs(wn - ws) / ws > 0.15:
         warn.append("длина изменилась больше чем на 15 %: пересказ или дописывание? объясни или откати")
-    if sws and abs(swn - sws) / sws > 0.25:
+    if not short and sws and abs(swn - sws) / sws > 0.25:
         warn.append("сводка изменилась больше чем на 25 %: объясни или откати")
-    if share > 0.5:
+    if not short and share > 0.5:
         warn.append("переписано больше половины фраз вне сводки: это пересказ, а не правка; объясни или откати")
     if ln and cv(ln) < cv(ls) - 0.05:
         warn.append("разброс длин фраз упал: перечитай, не выровнялся ли текст (не чини короткими фразами)")
     if long_n > long_s:
         warn.append("длинных фраз стало больше: перечитай их, разбивай только непрозрачные")
     if any(dash_gone.values()):
-        warn.append(f"тире ушли вместе с удалёнными фразами: {dash_gone} — проверь, что фразы удалены по делу")
+        warn.append(f"тире ушли вместе с удалёнными фразами, из заголовков или таблиц: {dash_gone} — "
+                    "проверь, что их убрали по делу")
     for w in warn:
         print(f"внимание: {w}")
 

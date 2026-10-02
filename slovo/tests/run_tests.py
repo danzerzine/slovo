@@ -27,8 +27,9 @@ import check  # noqa: E402
 
 
 def signals(src, new):
-    out = [f"потеряно {x}" for x in sorted(check.facts(src) - check.facts(new))]
-    out += [f"новое {x}" for x in sorted(check.facts(new) - check.facts(src))]
+    respelled = check.spelled(src, new)
+    out = [f"потеряно {x}" for x in sorted(check.facts(src) - check.facts(new) - respelled)]
+    out += [f"новое {x}" for x in sorted(check.facts(new) - check.facts(src) - respelled)]
     out += [f"единица {x}" for x in check.unit_changes(src, new)]
     out += [f"тире {k}" for k, v in check.dash_loss(src, new)[0].items() if v]
     out += [n for _, notes in check.marker_shifts(src, new) for n in notes]
