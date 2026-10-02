@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+# личные примеры и случаи из работы рядом со скиллом
+*.local.md
+*.local.json
