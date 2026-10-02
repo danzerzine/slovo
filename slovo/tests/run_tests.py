@@ -120,6 +120,23 @@ def run_hyphen():
     return failed
 
 
+def run_style():
+    """A style guide's «wrong → right» lines: a wrong form left in the rewrite is shown, a right form
+    that contains the wrong one («Таллинн» for «Таллин») and text in code are not."""
+    guide = "# Стайлгайд\n- «Таллин» → «Таллинн»\n- е-мейл, имейл -> email\nЁ — везде.\n"
+    pairs = check.style_pairs(guide)
+    cases = [("В Таллинн пришёл email.", []),
+             ("В Таллин пришёл имейл, `имейл` в коде.", ["«Таллин» ×1 (по стайлгайду «Таллинн»)",
+                                                          "«имейл» ×1 (по стайлгайду «email»)"])]
+    failed = 0
+    for text, want in cases:
+        got = check.style_misses(text, pairs)
+        ok = got == want
+        failed += not ok
+        print(f"{'ок' if ok else 'ПРОВАЛ'}: стайлгайд «{text}» → {got}")
+    return failed
+
+
 def folder_pairs(folder):
     for orig in sorted(Path(folder).glob("*.orig.md")):
         new_path = orig.with_name(orig.name[: -len(".orig.md")] + ".new.md")
@@ -154,7 +171,7 @@ def main():
     ap.add_argument("--repo", help="git repo whose --commit holds accepted rewrites (parent = sources)")
     ap.add_argument("--commit", help="commit with accepted rewrites, used with --repo")
     args = ap.parse_args()
-    failed = run_cases() + run_share() + run_rhythm() + run_hyphen()
+    failed = run_cases() + run_share() + run_rhythm() + run_hyphen() + run_style()
     if args.pairs:
         failed += run_pairs(folder_pairs(args.pairs))
     if args.repo and args.commit:

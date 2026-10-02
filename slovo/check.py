@@ -1,6 +1,6 @@
 """Compare a rewrite with its source: lost facts, shifted meaning markers, dashes, rhythm, length.
 
-Usage: python3 check.py source.md rewrite.md [--glossary glossary.md]
+Usage: python3 check.py source.md rewrite.md [--glossary glossary.md] [--style styleguide.md]
 Exit code 1 (hard stop) if a number, code, link or `fragment` was lost; if a new one appeared that is
 in neither the source nor the glossary; if a number changed its unit (5 % → 5 п. п.); or if a dash
 disappeared from prose that is still there (a hyphen standing for a dash, «Наконец - собрали», that is gone is
@@ -258,6 +258,29 @@ def mixed_script(text):
     return sorted(set(words))
 
 
+def style_pairs(text):
+    """Lines «wrong → right» from a publication's style guide: «Таллин → Таллинн», «интернет-сайт → сайт».
+    Several wrong forms may share one right form: «е-мейл, имейл → email». Other lines are ignored."""
+    pairs = []
+    for line in text.splitlines():
+        m = re.match(r"\s*(?:[-*]\s*)?(.+?)\s*(?:→|->)\s*(.+?)\s*$", line)
+        if m:
+            pairs += [(w.strip().strip("«»\"`"), m[2].strip("«»\"`")) for w in m[1].split(",") if w.strip()]
+    return pairs
+
+
+def style_misses(text, pairs):
+    """Wrong forms the style guide names that are still in the text, as whole words. Forms are not
+    declined: «Таллин» does not catch «Таллине», so a guide lists the forms it cares about."""
+    out, text = [], re.sub(r"`[^`\n]*`", "", strip_code(text))
+    for wrong, right in pairs:
+        flags = re.I if wrong[:1].islower() else 0  # «данный» also catches «Данный»; a name keeps its case
+        n = len(re.findall(rf"(?<!\w){re.escape(wrong)}(?!\w)", text, flags))
+        if n:
+            out.append(f"«{wrong}» ×{n} (по стайлгайду «{right}»)")
+    return out
+
+
 def unglue_particles(text):
     """«Было-бы» is a misspelt «было бы», not a new «бы»; «только-только» is still two «только»;
     «из за» is «из-за»."""
@@ -451,6 +474,9 @@ def main():
     ap.add_argument("rewrite")
     ap.add_argument("--glossary", action="append", default=[],
                     help="glossary or other project file a gloss may quote numbers from")
+    ap.add_argument("--style", action="append", default=[],
+                    help="the publication's style guide: lines «wrong → right» are checked in the rewrite; "
+                         "numbers in it count as allowed, like a glossary")
     ap.add_argument("--genre", choices=["report", "article"], default="report",
                     help="report: up to half of the sentences outside the summary may be rewritten; "
                          "article (also column, newsletter, interview, post): up to a third")
@@ -460,8 +486,11 @@ def main():
     args = ap.parse_args()
     src, new = (open(p, encoding="utf-8").read() for p in (args.source, args.rewrite))
     allowed = facts(src)
+    style = [open(g, encoding="utf-8").read() for g in args.style]
     for g in args.glossary:
         allowed |= facts(open(g, encoding="utf-8").read())
+    for t in style:
+        allowed |= facts(t)
     respelled = spelled(src, new)
     lost = sorted(facts(src) - facts(new) - respelled)
     cut = sorted(set(lost) & facts(deleted_text(src, new))) if args.shortened else []
@@ -534,6 +563,9 @@ def main():
     if mixed:
         warn.append(f"слова со смешанным алфавитом (латиница в русском слове или кириллица в латинском, "
                     f"римская цифра кириллицей): {mixed[:20]} — чаще всего это опечатка набора, исправь; игру слов («Deadушки») оставь")
+    misses = style_misses(new, [p for t in style for p in style_pairs(t)])
+    if misses:
+        warn.append(f"не по стайлгайду: {misses[:20]} — поправь, если это текст автора, а не цитата или название")
     for w in warn:
         print(f"внимание: {w}")
 
