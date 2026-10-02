@@ -3,7 +3,8 @@
 Usage: python3 check.py source.md rewrite.md [--glossary glossary.md]
 Exit code 1 (hard stop) if a number, code, link or `fragment` was lost; if a new one appeared that is
 in neither the source nor the glossary; if a number changed its unit (5 % → 5 п. п.); or if a dash
-disappeared from prose that is still there (a dash that left with a wholly deleted sentence, a
+disappeared from prose that is still there (a hyphen standing for a dash, «Наконец - собрали», that is gone is
+a warning; a dash that left with a wholly deleted sentence, a
 heading or a table cell is a warning; so is «3» → «три» or «в 2 раза» → «вдвое»). Under 150 words the
 length and rewrite thresholds are not applied; --genre article lowers the rewrite threshold from a half
 to a third; --shortened (the author asked to cut) drops the thresholds and lets a number leave with a
@@ -136,6 +137,15 @@ def multiples(text):
 
 def dashes(text):
     return {"—": text.count("—"), "–": text.count("–")}
+
+
+# A hyphen standing for a dash: «Наконец - собрали», «Наконец- собрали». Not a list bullet at the
+# start of a line and not a minus before a number.
+HYPHEN_DASH = re.compile(r"(?<=\S) -(?= \S)|(?<=[^\W\d_])- (?=\S)")
+
+
+def hyphen_dashes(text):
+    return sum(len(HYPHEN_DASH.findall(s)) for s in prose_lines(text))
 
 
 def prose_lines(text):
@@ -446,12 +456,14 @@ def main():
         print(f"ушло вместе с удалёнными фразами: {len(cut)} {cut[:40]}")
     print(f"новое (нет ни в исходнике, ни в глоссарии): {len(added)} {added[:40]}")
     print(f"число сменило единицу: {len(unit_swaps)} {unit_swaps[:20]}")
-    print(f"тире: было {ds}, стало {dn}")
+    hs, hn = hyphen_dashes(src), hyphen_dashes(new)
+    print(f"тире: было {ds}, стало {dn}; дефис вместо тире {hs} → {hn}")
     print(f"длина: {ws} → {wn} слов ({100 * (wn - ws) / max(ws, 1):+.0f} %); "
           f"сводка {nwords(sum_s)} → {nwords(sum_n)}")
     print(f"переписано фраз вне сводки (сходство слов < 75 %): {100 * share:.0f} %")
+    nominal = f"; номинализаций-кандидатов {ks} → {kn}" if ws >= 150 else ""
     print(f"датчики (не цель): разброс длин фраз {cv(ls):.2f} → {cv(ln):.2f}; "
-          f"фраз длиннее 30 слов {long_s} → {long_n}; номинализаций-кандидатов {ks} → {kn}")
+          f"фраз длиннее 30 слов {long_s} → {long_n}{nominal}")
 
     shifts = marker_shifts(src, new)
     if shifts:
@@ -469,8 +481,8 @@ def main():
         warn.append(f"число встречается реже, чем в исходнике: {fewer[:10]} — убран повтор или факт?")
     sws, swn = nwords(sum_s), nwords(sum_n)
     if short:
-        warn.append("короткий текст (меньше 150 слов): пороги длины и доли не считаются; сверь каждое число, "
-                    "имя и оговорку сам")
+        print("справка: короткий текст (меньше 150 слов): пороги длины и доли не считаются; сверь каждое число, "
+              "имя и оговорку сам")
     if cut:
         warn.append(f"числа ушли вместе с удалёнными фразами: {cut[:20]} — проверь, что мысль ушла целиком, "
                     "а не потеряла цифру")
@@ -487,6 +499,9 @@ def main():
     if any(dash_gone.values()):
         warn.append(f"тире ушли вместе с удалёнными фразами, из заголовков или таблиц: {dash_gone} — "
                     "проверь, что их убрали по делу")
+    if hn < hs:
+        warn.append(f"дефис с пробелами вместо тире пропал ({hs} → {hn}): тире автора — верни как было; "
+                    "опечатка в слове («маркет - плейс») — правку оставь")
     for w in warn:
         print(f"внимание: {w}")
 

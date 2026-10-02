@@ -105,6 +105,18 @@ def run_rhythm():
     return failed
 
 
+def run_hyphen():
+    """A hyphen standing for a dash is the author's typography; a list bullet and a minus are not dashes."""
+    cases = [("Наконец - собрали.", 1), ("Наконец- собрали.", 1), ("- пункт списка", 0),
+             ("Было -5 градусов.", 0), ("Только-только начали.", 0)]
+    failed = 0
+    for text, want in cases:
+        good = check.hyphen_dashes(text) == want
+        failed += not good
+        print(f"дефис: {text:<24} {'ок' if good else 'ПРОВАЛ'}")
+    return failed
+
+
 def folder_pairs(folder):
     for orig in sorted(Path(folder).glob("*.orig.md")):
         new_path = orig.with_name(orig.name[: -len(".orig.md")] + ".new.md")
@@ -139,7 +151,7 @@ def main():
     ap.add_argument("--repo", help="git repo whose --commit holds accepted rewrites (parent = sources)")
     ap.add_argument("--commit", help="commit with accepted rewrites, used with --repo")
     args = ap.parse_args()
-    failed = run_cases() + run_share() + run_rhythm()
+    failed = run_cases() + run_share() + run_rhythm() + run_hyphen()
     if args.pairs:
         failed += run_pairs(folder_pairs(args.pairs))
     if args.repo and args.commit:
