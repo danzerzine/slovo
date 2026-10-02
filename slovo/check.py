@@ -106,7 +106,8 @@ def spelled(src, new):
     for n, rx in NUMBER_WORD_RE.items():
         ws, wn = len(rx.findall(strip_code(src))), len(rx.findall(strip_code(new)))
         cs, cn = number_counts(src)[n], number_counts(new)[n]
-        if (cs > cn and wn > ws) or (cn > cs and ws > wn):
+        # the total (digits + words) must hold: «3 месяца, 3 %» → «три месяца» still lost a 3
+        if cs + ws == cn + wn and cs != cn:
             out.add(n)
     return out
 
