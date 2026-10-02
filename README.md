@@ -9,7 +9,7 @@
 ## Что внутри
 
 - `slovo/SKILL.md` — инструкция для агента в трёх частях: что нарушать нельзя, редакторские приёмы, проверка после работы.
-- `slovo/examples.md` — пары «было → стало». Там есть хорошие правки, абзац, который правильно не тронули, и разбор перекрученных правок: каждая выглядит гладко и каждая меняет смысл.
+- `slovo/examples.md` — пары «было → стало»: хорошие правки (в том числе по правилам Пушкина, Чехова и Оруэлла), абзац, который правильно не тронули, и разбор перекрученных правок, каждая из которых выглядит гладко и меняет смысл.
 - `slovo/check.py` — сверка правки с исходником, только стандартная библиотека Python. Останавливает правку, если потерялось или появилось число, если «5 %» стало «5 п. п.», если пропало тире. Отдельно показывает места, где фраза получила «вдвое», «обвал», «всей», «поэтому» или потеряла оговорку, — с цитатой, чтобы перечитать.
 - `slovo/tests/` — регрессионные тесты для `check.py`: плохая правка должна быть помечена, хорошая — нет.
 
@@ -21,9 +21,52 @@
 
 ## Установка
 
-Claude Code: скопируйте папку `slovo` в `~/.claude/skills/` (для всех проектов) или в `.claude/skills/` проекта. Скилл вызывается командой `/slovo` или сам, когда вы просите «перепиши по-человечески», «вычитай», «убери канцелярит».
+Скилл — это папка `slovo` с файлом `SKILL.md` внутри, по открытому формату Agent Skills. Её понимают большинство агентов; различается только место, откуда они её берут. Ниже `danzerzine/slovo` — адрес этого репозитория на GitHub.
 
-Другие агенты, которые читают `SKILL.md`: положите папку `slovo` туда, откуда они берут скиллы.
+### Одна копия для всех агентов
+
+```bash
+git clone https://github.com/danzerzine/slovo.git ~/slovo-skill
+```
+
+```bash
+mkdir -p ~/.agents/skills ~/.claude/skills && ln -s ~/slovo-skill/slovo ~/.agents/skills/slovo && ln -s ~/slovo-skill/slovo ~/.claude/skills/slovo
+```
+
+Папку `~/.agents/skills` читают Codex, Gemini CLI, Cursor, GitHub Copilot и OpenCode, папку `~/.claude/skills` — Claude Code (OpenCode читает обе). Обновить скилл: `git -C ~/slovo-skill pull`.
+
+### По агентам
+
+| Агент | Для всех проектов | Для одного проекта |
+|---|---|---|
+| Claude Code | `~/.claude/skills/slovo/` | `.claude/skills/slovo/` |
+| Codex (OpenAI) | `~/.agents/skills/slovo/` | `.agents/skills/slovo/` |
+| Gemini CLI | `~/.gemini/skills/slovo/` или `~/.agents/skills/slovo/` | `.gemini/skills/slovo/` или `.agents/skills/slovo/` |
+| Cursor | `~/.cursor/skills/slovo/` или `~/.agents/skills/slovo/` | `.cursor/skills/slovo/` или `.agents/skills/slovo/` |
+| GitHub Copilot (CLI, VS Code, облачный агент) | `~/.copilot/skills/slovo/` или `~/.agents/skills/slovo/` | `.github/skills/slovo/` или `.agents/skills/slovo/` |
+| OpenCode | `~/.config/opencode/skills/slovo/` или `~/.agents/skills/slovo/` | `.opencode/skills/slovo/` или `.agents/skills/slovo/` |
+
+У двух агентов есть своя команда установки:
+
+```bash
+gemini skills install https://github.com/danzerzine/slovo.git --path slovo
+```
+
+```bash
+gh skill install danzerzine/slovo slovo --agent claude-code --scope user
+```
+
+`gh skill install` (GitHub CLI) ставит скилл в нужную папку для выбранного агента: вместо `claude-code` можно указать `github-copilot`, `cursor`, `opencode` и другие.
+
+### Claude в браузере и в приложении
+
+Заархивируйте папку `slovo` в ZIP и загрузите: Customize → Skills → «+» → Create skill → Upload a skill. Нужно включённое выполнение кода (code execution). Без него скилл тоже работает, но `check.py` не запустится, и сверку цифр придётся делать вручную.
+
+### Чат без поддержки скиллов
+
+Вставьте содержимое `SKILL.md` в инструкции проекта или в начало разговора, а `examples.md` приложите файлом. Правила и примеры будут работать в любой модели; не будет только автоматической проверки `check.py`.
+
+Скилл вызывается командой `/slovo` (в агентах, где скиллы вызываются через слэш) или сам, когда вы просите «перепиши по-человечески», «вычитай», «убери канцелярит».
 
 ## Как пользоваться
 
@@ -31,9 +74,9 @@ Claude Code: скопируйте папку `slovo` в `~/.claude/skills/` (д�
 /slovo перепиши по-человечески docs/report.md
 ```
 
-Агент правит, прогоняет проверку, показывает два-три места «было → стало» и, если где-то не смог понять автора, список «Вопросы автору». Двусмысленное он не угадывает.
+Агент правит, прогоняет проверку (если может запускать Python), показывает два-три места «было → стало» и, если где-то не смог понять автора, список «Вопросы автору». Двусмысленное он не угадывает.
 
-Проверку можно запустить и самому:
+Проверку можно запустить и самому, нужен только Python 3:
 
 ```bash
 python3 slovo/check.py report.orig.md report.md --glossary glossary.md
