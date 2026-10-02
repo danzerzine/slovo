@@ -1,0 +1,6 @@
+renders/
+AGENTS.md
+CLAUDE.md
+.hyperframes/
+snapshots/
+__pycache__/

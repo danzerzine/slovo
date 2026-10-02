@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=960, height=540" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+  font-family: 'Golos Text';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(assets/fonts/GolosText-normal-cyrillic-721d01.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Golos Text';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(assets/fonts/GolosText-normal-latin-65c68b.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Golos Text';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(assets/fonts/GolosText-normal-cyrillic-721d01.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Golos Text';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(assets/fonts/GolosText-normal-latin-65c68b.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Golos Text';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(assets/fonts/GolosText-normal-cyrillic-721d01.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Golos Text';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(assets/fonts/GolosText-normal-latin-65c68b.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(assets/fonts/JetBrainsMono-normal-cyrillic-ffa6bb.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(assets/fonts/JetBrainsMono-normal-latin-1cd702.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(assets/fonts/JetBrainsMono-normal-cyrillic-ffa6bb.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(assets/fonts/JetBrainsMono-normal-latin-1cd702.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'PT Serif';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(assets/fonts/PTSerif-italic-cyrillic-dfdb93.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'PT Serif';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(assets/fonts/PTSerif-italic-latin-f5c530.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+      @font-face { font-family: 'Apple Color Emoji'; src: local('Apple Color Emoji'); }
+      :root {
+        --bg: #16141a;
+        --panel: #221f28;
+        --line: #393442;
+        --ink: #efe9e0;
+        --ink-2: #a8a0ad;
+        --accent: #ff7a59;
+        --accent-soft: rgba(255, 122, 89, 0.22);
+        --keep: #8fd3a8;
+        --keep-soft: rgba(143, 211, 168, 0.18);
+        --ui: "Golos Text", sans-serif;
+        --mono: "JetBrains Mono", monospace;
+        --serif: "PT Serif", serif;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 960px; height: 540px; overflow: hidden; background: var(--bg); }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: var(--ui); color: var(--ink); }
+
+      /* background */
+      .glow { position: absolute; border-radius: 50%; }
+      #glow-a { width: 620px; height: 620px; right: -200px; top: -260px; background: radial-gradient(circle, rgba(255, 122, 89, 0.2) 0%, rgba(255, 122, 89, 0) 65%); }
+      #glow-b { width: 560px; height: 560px; left: -240px; bottom: -300px; background: radial-gradient(circle, rgba(143, 211, 168, 0.13) 0%, rgba(143, 211, 168, 0) 65%); }
+
+      /* composer */
+      #stage { position: absolute; inset: 0; }
+      #composer { position: absolute; left: 56px; right: 56px; top: 40px; bottom: 40px; background: var(--panel); border: 2px solid var(--line); border-radius: 24px; display: flex; flex-direction: column; padding: 22px 34px 20px; }
+      #head { height: 38px; display: flex; align-items: center; justify-content: space-between; position: relative; }
+      .meta { font: 500 18px/1 var(--mono); color: var(--ink-2); letter-spacing: 0.02em; }
+      #cmd { position: absolute; left: 0; top: 0; height: 38px; display: flex; align-items: center; gap: 10px; }
+      #cmd-chip { font: 700 21px/1 var(--mono); color: var(--bg); background: var(--ink); border-radius: 8px; padding: 7px 11px 6px; }
+      #cmd-note { font: 500 18px/1 var(--mono); color: var(--ink-2); }
+      #lock-chip, #cheap-chip { position: absolute; right: 0; top: 0; height: 38px; display: flex; align-items: center; gap: 8px; font: 500 18px/1 var(--mono); border-radius: 8px; padding: 0 12px; }
+      #lock-chip { color: var(--keep); background: var(--keep-soft); }
+      #cheap-chip { color: var(--ink-2); border: 2px dashed var(--line); }
+      #cheap-chip b { color: var(--ink); font-weight: 500; }
+
+      #body { position: relative; flex: 1; margin-top: 34px; }
+      #placeholder { position: absolute; left: 0; top: 0; font: 400 25px/1.44 var(--ui); color: var(--ink-2); display: flex; align-items: center; gap: 2px; }
+      #caret { display: inline-block; width: 2px; height: 28px; background: var(--ink); }
+      #draft { position: relative; font: 400 25px/1.44 var(--ui); color: var(--ink); }
+      #p1, #p3 { margin-bottom: 0; }
+      #p1 { padding-bottom: 0.48em; }
+      #p3 { padding-top: 0.48em; }
+      .t, .sw { font-size: 1em; border-radius: 5px; background-image: linear-gradient(var(--accent), var(--accent)); background-repeat: no-repeat; background-size: 0% 3px; background-position: 0 60%; }
+      .lock { display: inline-block; border-radius: 5px; }
+      #dashg { padding: 0 0.08em; border-radius: 5px; }
+      .nb { white-space: nowrap; }
+      #dashg, .w { display: inline-block; }
+      #draft { transform-origin: 0 0; }
+      .emoji { font-family: "Apple Color Emoji", sans-serif; font-size: 0.88em; }
+
+      #labels { position: absolute; inset: 0; pointer-events: none; }
+      .label { position: absolute; font: 700 20px/1 var(--mono); color: var(--bg); background: var(--accent); border-radius: 7px; padding: 6px 9px 5px; white-space: nowrap; opacity: 0; }
+      #flag { background: var(--accent); }
+
+      #foot { height: 46px; display: flex; align-items: center; justify-content: space-between; position: relative; }
+      #caption { font: italic 400 25px/1.2 var(--serif); color: var(--ink); opacity: 0; }
+      #send { width: 46px; height: 46px; border-radius: 50%; background: var(--ink); display: flex; align-items: center; justify-content: center; }
+      #send svg { width: 22px; height: 22px; }
+      #pointer { position: absolute; left: 0; top: 0; width: 26px; height: 32px; }
+
+      /* end card */
+      #card { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; opacity: 0; }
+      #card-cmd { font: 700 108px/1 var(--mono); color: var(--ink); letter-spacing: -0.02em; }
+      #card-cmd span { color: var(--accent); }
+      #card-tag { font: italic 400 44px/1 var(--serif); color: var(--ink); }
+      #intro { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      #intro-line { font: 500 38px/1.2 var(--ui); color: var(--ink); letter-spacing: -0.01em; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="15.5" data-width="960" data-height="540">
+      <div id="bg" class="clip" data-layout-allow-overflow data-start="0" data-duration="15.5" data-track-index="0" style="position:absolute;inset:0">
+        <div id="glow-a" class="glow"></div>
+        <div id="glow-b" class="glow"></div>
+      </div>
+
+      <div id="stage" class="clip" data-start="0" data-duration="15.5" data-track-index="1">
+        <div id="composer">
+          <div id="head">
+            <span id="meta" class="meta">черновик поста</span>
+            <div id="cmd"><span id="cmd-chip">/slovo</span><span id="cmd-note">правлю</span></div>
+            <div id="lock-chip">
+              <svg width="14" height="16" viewBox="0 0 14 16" fill="none"><rect x="1" y="7" width="12" height="8" rx="2" fill="#8fd3a8"/><path d="M4 7V5a3 3 0 0 1 6 0v2" stroke="#8fd3a8" stroke-width="2"/></svg>
+              <span>под замком: цифры и тире</span>
+            </div>
+            <div id="cheap-chip"><span>дешёвый хьюманайзер:</span><b>«тире — признак нейросети»</b></div>
+          </div>
+
+          <div id="body">
+            <div id="placeholder"><span id="caret"></span><span>Сообщение</span></div>
+            <div id="draft">
+              <p id="p1"><span class="t" id="prompt">Конечно! Вот пост для вашего канала:</span></p>
+              <p id="p2"><span class="t" id="rocket"><span class="emoji">🚀</span> </span><span class="t" id="w1">В современном мире данные играют ключевую роль. </span><span class="t" id="w2">Важно отметить, что </span><span class="t" id="np">конверсия не просто цифра, а пульс бизнеса. </span>В этом месяце <span class="sw" id="ona">она</span><span class="sw" id="konv">конверсия</span> <span class="nb"><span class="sw" id="fall">снизилась на <span class="lock" id="n12">12&nbsp;%</span></span><span class="sw" id="crash">рухнула <span class="lock" id="vdvoe">вдвое</span></span><span class="sw" id="dash"> <span class="lock" id="dashc"><span id="dashg">—</span></span> </span><span class="sw" id="comma">, </span></span><span class="sw" id="inasha">и наша </span>команда <span class="sw" id="busy">уже активно работает над этим вызовом!</span><span class="sw" id="calm">уже этим занимается.</span><span class="sw" id="save">спасает ситуацию.</span><span class="t" id="muscle"> <span class="emoji">💪</span></span></p>
+              <p id="p3"><span class="t" id="hope">Надеюсь, это поможет!</span></p>
+            </div>
+            <div id="labels">
+              <span class="label" data-layout-allow-overlap id="l-prompt">остаток промпта</span>
+              <span class="label" data-layout-allow-overlap id="l-rocket">эмодзи</span>
+              <span class="label" data-layout-allow-overlap id="l-muscle">эмодзи</span>
+              <span class="label" data-layout-allow-overlap id="l-water">вода</span>
+              <span class="label" data-layout-allow-overlap id="l-np">«не просто X, а Y»</span>
+              <span class="label" data-layout-allow-overlap id="l-hope">вежливость бота</span>
+              <span class="label" data-layout-allow-overlap id="flag">было: 12 %</span>
+            </div>
+          </div>
+
+          <div id="foot">
+            <span id="caption">Тире — это русский язык, а не улика.</span>
+            <div id="send"><svg viewBox="0 0 22 22" fill="none"><path d="M11 18V4M11 4l-6 6M11 4l6 6" stroke="#16141a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </div>
+        </div>
+        <svg id="pointer" viewBox="0 0 26 32"><path d="M2 2l20 15.5-9 1.4 5.3 10.6-3.6 1.8-5.3-10.7L2 27z" fill="#efe9e0" stroke="#16141a" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </div>
+
+      <div id="intro" class="clip" data-start="0" data-duration="15.5" data-track-index="3"><div id="intro-line">без ИИ-слопа и без «Пиши, сокращай»</div></div>
+
+      <div id="card" class="clip" data-start="0" data-duration="15.5" data-track-index="2">
+        <div id="card-cmd"><span>/</span>slovo</div>
+        <div id="card-tag">живой и точный</div>
+      </div>
+    </div>
+
+    <script>
+      document.fonts.ready.then(() => {
+        const $ = (id) => document.getElementById(id);
+        const tl = gsap.timeline({ paused: true });
+        const T = 15.5;
+        const D = 1.5; // the opening line holds this long before the story starts
+        const draftEl = $("draft");
+
+        // --- split the draft into word boxes so persisting words can glide between layouts ---
+        const wrap = (node) => {
+          [...node.childNodes].forEach((ch) => {
+            if (ch.nodeType === 3) {
+              const parts = ch.textContent.split(/( +)/).filter((s) => s.length);
+              const frag = document.createDocumentFragment();
+              parts.forEach((s) => {
+                if (/^ +$/.test(s)) frag.appendChild(document.createTextNode(s));
+                else { const w = document.createElement("span"); w.className = "w"; w.textContent = s; frag.appendChild(w); }
+              });
+              ch.replaceWith(frag);
+            } else if (ch.classList.contains("lock") || ch.classList.contains("emoji")) {
+              ch.classList.add("w");
+            } else wrap(ch);
+          });
+        };
+        ["p1", "p2", "p3"].forEach((id) => wrap($(id)));
+        const words = [...draftEl.querySelectorAll(".w")];
+
+        // --- three layouts: the draft, the clean line, the cheap humanizer's line ---
+        const FULL = draftEl.offsetWidth;
+        let S = 1.44, NARROW = 0;
+        const pieces = ["prompt", "rocket", "w1", "w2", "np", "muscle", "hope", "ona", "konv", "fall", "crash", "dash", "comma", "inasha", "busy", "calm", "save", "p1", "p3"];
+        const removed = ["prompt", "rocket", "w1", "w2", "np", "muscle", "hope", "p1", "p3", "ona", "inasha", "busy"];
+        const L = {
+          draft: { hide: ["konv", "crash", "comma", "calm", "save"], width: FULL },
+          clean: { hide: removed.concat(["crash", "comma", "save"]), width: 0 },
+          cheap: { hide: removed.concat(["fall", "dash", "calm"]), width: 0 },
+        };
+        const style = (name) => {
+          const st = {};
+          pieces.forEach((id) => { st[id] = L[name].hide.includes(id) ? "0em" : "1em"; });
+          return st;
+        };
+        const applyNow = (name) => {
+          const st = style(name);
+          pieces.forEach((id) => { $(id).style.fontSize = st[id]; });
+          draftEl.style.width = L[name].width + "px";
+        };
+        const local = (el, root) => {
+          let x = 0, y = 0, n = el;
+          while (n && n !== root) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+          return { x, y };
+        };
+        // largest scale at which the clean line still sits in two lines
+        for (; S > 1.1; S -= 0.02) {
+          NARROW = Math.floor(FULL / S);
+          L.clean.width = L.cheap.width = NARROW;
+          applyNow("clean");
+          const ys = new Set(words.filter((w) => w.offsetWidth > 0).map((w) => local(w, draftEl).y));
+          if (ys.size <= 2) break;
+        }
+        const P = {};
+        ["cheap", "clean", "draft"].forEach((name) => {
+          applyNow(name);
+          P[name] = words.map((w) => (w.offsetWidth > 0 ? local(w, draftEl) : null));
+        });
+        // draft layout is now live; labels are measured in it (offsets relative to #body)
+        const body = $("body");
+        const place = (labelId, targetId, dy = -30) => {
+          const p = local($(targetId), body);
+          gsap.set($(labelId), { left: p.x, top: p.y + dy });
+        };
+        place("l-prompt", "prompt");
+        place("l-rocket", "rocket");
+        { const m = local($("muscle"), body); gsap.set("#l-muscle", { left: m.x + $("muscle").offsetWidth + 8, top: m.y + 3 }); }
+        place("l-water", "w2");
+        place("l-np", "np");
+        place("l-hope", "hope");
+        const d0 = local(draftEl, body);
+        const vi = words.indexOf($("vdvoe"));
+        gsap.set("#flag", { left: d0.x + P.cheap[vi].x * S, top: d0.y + P.cheap[vi].y * S - 34 });
+
+        // layout switch at t: instant re-layout, then every surviving word glides from its old place
+        const relayout = (from, to, t, d = 0.55) => {
+          const st = style(to);
+          pieces.forEach((id) => tl.set("#" + id, { fontSize: st[id] }, t));
+          tl.set(draftEl, { width: L[to].width }, t);
+          words.forEach((w, i) => {
+            const a = P[from][i], b = P[to][i];
+            if (!a || !b || (a.x === b.x && a.y === b.y)) return;
+            tl.fromTo(w, { x: a.x - b.x, y: a.y - b.y }, { x: 0, y: 0, duration: d, ease: "power3.inOut", immediateRender: false }, t);
+          });
+        };
+
+        // pointer path
+        const send = $("send");
+        const sp = (() => { const p = local(send, $("stage")); return { x: p.x + 24, y: p.y + 22 }; })();
+
+        // --- initial state (frame 0 == last frame) ---
+        gsap.set("#draft", { opacity: 0, y: 6 });
+        gsap.set("#placeholder", { opacity: 1 });
+        gsap.set(["#cmd", "#lock-chip", "#cheap-chip"], { opacity: 0 });
+        gsap.set("#meta", { opacity: 1 });
+        gsap.set("#pointer", { x: sp.x + 150, y: sp.y + 60, opacity: 0 });
+        gsap.set("#composer", { opacity: 0, scale: 0.97 });
+        gsap.set("#intro-line", { opacity: 1, y: 0 });
+
+        // 0. opening line, then the composer
+        tl.to("#intro-line", { opacity: 0, y: -10, duration: 0.3, ease: "power2.in" }, D - 0.4);
+        tl.to("#composer", { opacity: 1, scale: 1, duration: 0.3, ease: "power2.out" }, D - 0.2);
+        gsap.set(["#konv", "#crash", "#comma", "#calm", "#save"], { opacity: 0 });
+
+        // background glows stay still: in a GIF their breathing costs more bytes than it shows
+        tl.fromTo("#caret", { opacity: 1 }, { opacity: 0, duration: 0.01, repeat: 1, repeatDelay: 0.2, yoyo: true }, D + 0.12);
+
+        // 1. paste the draft, pointer drifts to «send»
+        tl.to("#placeholder", { opacity: 0, duration: 0.12 }, D + 0.3);
+        tl.to("#draft", { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" }, D + 0.3);
+        tl.to("#pointer", { opacity: 1, duration: 0.2 }, D + 0.5);
+        tl.to("#pointer", { x: sp.x, y: sp.y, duration: 0.6, ease: "power3.inOut" }, D + 0.6);
+        tl.to("#pointer", { x: sp.x - 3, y: sp.y + 2, duration: 0.25, ease: "sine.inOut", yoyo: true, repeat: 1 }, D + 1.3);
+
+        // 2. /slovo steps in
+        const s2 = D + 1.9;
+        tl.to("#pointer", { x: sp.x + 120, y: sp.y + 80, opacity: 0, duration: 0.5, ease: "power2.in" }, s2);
+        tl.to("#meta", { opacity: 0, duration: 0.15 }, s2);
+        tl.fromTo("#cmd", { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.3, ease: "back.out(2)" }, s2 + 0.05);
+        tl.fromTo("#lock-chip", { opacity: 0, x: 10 }, { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }, s2 + 0.3);
+        const KEEP = { color: "#8fd3a8", backgroundColor: "rgba(143,211,168,0.18)", textShadow: "0 0 14px rgba(143,211,168,0.75)" };
+        const PLAIN = { color: "#efe9e0", backgroundColor: "rgba(143,211,168,0)", textShadow: "0 0 0px rgba(143,211,168,0)" };
+        tl.fromTo(["#n12", "#dashg"], PLAIN, Object.assign({ duration: 0.3, immediateRender: false }, KEEP), s2 + 0.35);
+
+        // tells peel one by one
+        const tell = (ids, labels, t) => {
+          ids.forEach((id) => tl.to("#" + id, { backgroundColor: "rgba(255,122,89,0.22)", duration: 0.2 }, t));
+          labels.forEach((l) => tl.fromTo("#" + l, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.22, ease: "back.out(2.5)" }, t));
+          ids.forEach((id) => tl.to("#" + id, { backgroundSize: "100% 3px", duration: 0.3, ease: "power2.inOut" }, t + 0.3));
+          ids.forEach((id) => tl.to("#" + id, { opacity: 0.3, duration: 0.3 }, t + 0.65));
+          labels.forEach((l) => tl.to("#" + l, { opacity: 0, y: -6, duration: 0.15 }, t + 1.15));
+        };
+        const s3 = D + 2.55, step = 0.55;
+        tell(["prompt"], ["l-prompt"], s3);
+        tell(["rocket", "muscle"], ["l-rocket", "l-muscle"], s3 + step);
+        tell(["w1", "w2"], ["l-water"], s3 + step * 2);
+        tell(["np"], ["l-np"], s3 + step * 3);
+        tell(["hope"], ["l-hope"], s3 + step * 4);
+
+        // collapse: the struck pieces and two clumsy phrases go, the rest closes up and grows
+        const c = s3 + step * 4 + 0.95;
+        tl.to(removed.filter((id) => id !== "p1" && id !== "p3").map((id) => "#" + id), { opacity: 0, duration: 0.25 }, c - 0.25);
+        relayout("draft", "clean", c, 0.6);
+        tl.fromTo("#draft", { scale: 1 }, { scale: S, duration: 0.6, ease: "power3.inOut", immediateRender: false }, c);
+        tl.to(["#konv", "#calm"], { opacity: 1, duration: 0.3 }, c + 0.5);
+
+        // 3. cheap humanizer: plucks the dash, inflates the number
+        const s4 = c + 1.05;
+        tl.to("#lock-chip", { opacity: 0, x: 10, duration: 0.2 }, s4);
+        tl.to("#cmd", { opacity: 0.6, duration: 0.2 }, s4);
+        tl.fromTo("#cheap-chip", { opacity: 0, x: 10 }, { opacity: 1, x: 0, duration: 0.3, ease: "power2.out" }, s4 + 0.1);
+        tl.to("#dashg", { y: -40, rotation: -28, opacity: 0, duration: 0.4, ease: "power2.in" }, s4 + 0.4);
+        tl.to(["#fall", "#calm"], { opacity: 0, duration: 0.2 }, s4 + 0.6);
+        relayout("clean", "cheap", s4 + 0.8, 0.4);
+        tl.to(["#crash", "#comma", "#save"], { opacity: 1, duration: 0.25 }, s4 + 0.95);
+
+        // slovo answers: flag on «вдвое», then everything goes back
+        const s5 = s4 + 2.0;
+        tl.to("#cmd", { opacity: 1, duration: 0.2 }, s5);
+        tl.to("#cheap-chip", { opacity: 0.35, duration: 0.2 }, s5);
+        tl.to("#vdvoe", { backgroundColor: "rgba(255,122,89,0.25)", duration: 0.2 }, s5);
+        tl.fromTo("#flag", { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.25, ease: "back.out(2.5)" }, s5 + 0.05);
+        const back = s5 + 0.75;
+        tl.to("#flag", { opacity: 0, y: -6, duration: 0.25 }, back);
+        tl.to("#cheap-chip", { opacity: 0, duration: 0.2 }, back);
+        tl.to(["#crash", "#comma", "#save"], { opacity: 0, duration: 0.2 }, back);
+        tl.to("#lock-chip", { opacity: 1, x: 0, duration: 0.25 }, back + 0.1);
+        relayout("cheap", "clean", back + 0.2, 0.4);
+        tl.to(["#fall", "#calm"], { opacity: 1, duration: 0.25 }, back + 0.3);
+        tl.fromTo("#dashg", { y: -40, rotation: -28, opacity: 0 }, { y: 0, rotation: 0, opacity: 1, duration: 0.45, ease: "back.out(1.6)", immediateRender: false }, back + 0.3);
+        tl.fromTo("#caption", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, back + 0.5);
+
+        // 4. send
+        const s6 = back + 1.45;
+        tl.fromTo("#pointer", { x: sp.x + 120, y: sp.y + 80, opacity: 0 }, { x: sp.x, y: sp.y, opacity: 1, duration: 0.45, ease: "power3.out", immediateRender: false }, s6);
+        tl.to("#send", { scale: 0.86, duration: 0.08, yoyo: true, repeat: 1, ease: "power1.inOut" }, s6 + 0.55);
+        tl.to("#pointer", { scale: 0.88, duration: 0.08, yoyo: true, repeat: 1, ease: "power1.inOut" }, s6 + 0.55);
+
+        // 5. end card
+        const s7 = s6 + 0.85;
+        tl.to("#composer", { opacity: 0, scale: 0.97, duration: 0.35, ease: "power2.in" }, s7);
+        tl.to("#pointer", { opacity: 0, duration: 0.2 }, s7);
+        tl.fromTo("#card", { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, s7 + 0.25);
+        tl.fromTo("#card-cmd", { y: 14 }, { y: 0, duration: 0.5, ease: "power3.out" }, s7 + 0.25);
+        tl.fromTo("#card-tag", { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, s7 + 0.45);
+
+        // loop back to the opening line (frame 0)
+        const s8 = T - 0.5;
+        tl.to("#card", { opacity: 0, duration: 0.3, ease: "power2.in" }, s8);
+        tl.set(["#draft", "#cmd", "#lock-chip", "#caption"], { opacity: 0 }, s8 + 0.3);
+        tl.set(["#meta", "#placeholder"], { opacity: 1 }, s8 + 0.3);
+        tl.fromTo("#intro-line", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out", immediateRender: false }, s8 + 0.2);
+
+        window.__timelines["main"] = tl;
+      });
+    </script>
+  </body>
+</html>
