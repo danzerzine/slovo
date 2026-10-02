@@ -159,6 +159,11 @@ def sentences(text):
     return [p for p in parts if len(p.split()) >= 2]
 
 
+def nwords(text):
+    """Words, not tokens: a comma or dash cut off by spaces («текст , и») is not a word."""
+    return sum(1 for w in text.split() if re.search(r"\w", w))
+
+
 def cv(lengths):
     if len(lengths) < 3:
         return 0.0
@@ -226,7 +231,8 @@ def stops_restored(src, new):
 
 
 def unglue_particles(text):
-    """«Было-бы» is a misspelt «было бы», not a new «бы»."""
+    """«Было-бы» is a misspelt «было бы», not a new «бы»; «только-только» is still two «только»."""
+    text = re.sub(r"(?<![\w-])(\w+)-(\1)(?![\w-])", r"\1 \2", text, flags=re.I)
     return re.sub(r"(?<=\w)-(?=(?:бы|ли|же)(?![\w-]))", " ", text, flags=re.I)
 
 
@@ -428,8 +434,8 @@ def main():
     unit_swaps = unit_changes(src, new)
     ds, dn = dashes(src), dashes(new)
     dash_lost, dash_gone = dash_loss(src, new)
-    ls, ln = ([len(s.split()) for s in sentences(t)] for t in (src, new))
-    ws, wn = len(src.split()), len(new.split())
+    ls, ln = ([nwords(s) for s in sentences(t)] for t in (src, new))
+    ws, wn = nwords(src), nwords(new)
     (sum_s, body_s), (sum_n, body_n) = summary_split(src), summary_split(new)
     share = changed_share(body_s, body_n)
     long_s, long_n = sum(n > 30 for n in ls), sum(n > 30 for n in ln)
@@ -442,7 +448,7 @@ def main():
     print(f"число сменило единицу: {len(unit_swaps)} {unit_swaps[:20]}")
     print(f"тире: было {ds}, стало {dn}")
     print(f"длина: {ws} → {wn} слов ({100 * (wn - ws) / max(ws, 1):+.0f} %); "
-          f"сводка {len(sum_s.split())} → {len(sum_n.split())}")
+          f"сводка {nwords(sum_s)} → {nwords(sum_n)}")
     print(f"переписано фраз вне сводки (сходство слов < 75 %): {100 * share:.0f} %")
     print(f"датчики (не цель): разброс длин фраз {cv(ls):.2f} → {cv(ln):.2f}; "
           f"фраз длиннее 30 слов {long_s} → {long_n}; номинализаций-кандидатов {ks} → {kn}")
@@ -461,7 +467,7 @@ def main():
         warn.append(f"число сменило запись (цифра ↔ слово): {sorted(respelled, key=int)} — проверь, что значение то же")
     if fewer:
         warn.append(f"число встречается реже, чем в исходнике: {fewer[:10]} — убран повтор или факт?")
-    sws, swn = len(sum_s.split()), len(sum_n.split())
+    sws, swn = nwords(sum_s), nwords(sum_n)
     if short:
         warn.append("короткий текст (меньше 150 слов): пороги длины и доли не считаются; сверь каждое число, "
                     "имя и оговорку сам")
