@@ -79,13 +79,16 @@ def run_share():
     heavy = "Ни одна из трёх версий не объясняет спад. Майские данные охватывают всех клиентов. " \
             "Ручная сборка отчёта прошла двойную проверку. Открытыми остаются лишь возвраты."
     cases = [("запятая и одно слово", light, lambda x: x == 0), ("пересказ", heavy, lambda x: x == 1)]
+    # a post without «## » headings has no summary: its rewritten share is counted, not hidden as summary
+    hidden = check.summary_split(src)[0] != ""
+    print(f"доля: текст без заголовков {'ПРОВАЛ: весь текст считается сводкой' if hidden else 'ок'}")
     failed = 0
     for name, new, ok in cases:
         share = check.changed_share(src, new)
         good = ok(share)
         failed += not good
         print(f"доля: {name:<20} {100 * share:.0f} % {'ок' if good else 'ПРОВАЛ'}")
-    return failed
+    return failed + hidden
 
 
 def run_rhythm():

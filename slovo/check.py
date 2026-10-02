@@ -28,7 +28,7 @@ MARKERS = {
                r"|беспрецедентн\w*|стремительн\w*|кардинальн\w*|революционн\w*|взрывн\w*", "+"),
     "кратность": (r"вдвое|втрое|вчетверо|в\s+(?:\d+(?:[.,]\d+)?|два|три|четыре|пять|десять)\s+раза?", "+"),
     "охват": (r"всей|весь|вся|всю|целиком|полностью|никогда|всегда|ни\s+од(?:ин|на|но|ной|ного)", "+"),
-    "причина": (r"из-за|поэтому|потому\s+что|вызван\w*|вызвал\w*|привел\w*|привёл\w*|привод\w*|благодаря"
+    "причина": (r"из-за|поэтому|потому,?\s+что|вызван\w*|вызвал\w*|привел\w*|привёл\w*|привод\w*|благодаря"
                 r"|следовательно|помога\w*|помогл\w*|влия\w*|повлия\w*|объясн\w*|(?<!в\s)связ\w*", "±"),
     "оговорка": (r"примерно|около|порядка|почти|вероятно|возможно|может|могут|скорее|похоже|видимо"
                  r"|предположительно|по-видимому|гипотез\w*|доказан\w*|проверял\w*|сверял\w*", "-"),
@@ -48,7 +48,8 @@ KANTS = re.compile(
     r"|(?<!\w)\w{3,}(?:ние|ния|нию|нием|нии|ций|ция|цию|цией|ции)(?!\w)",
     re.I,
 )
-NUMBER = re.compile(r"(?<![\w.])\d{1,3}(?:[  ]\d{3})+(?:[.,]\d+)?|(?<![\w.])\d+(?:[.,:]\d+)*")
+# Digits glued to a Cyrillic word («номер5») are a number too; after a Latin letter they are a code (B64).
+NUMBER = re.compile(r"(?<![A-Za-z\d_.])\d{1,3}(?:[  ]\d{3})+(?:[.,]\d+)?|(?<![A-Za-z\d_.])\d+(?:[.,:]\d+)*")
 # A number with the unit that changes its meaning. Dates (25.09) are not numbers with units.
 UNIT = re.compile(r"(?<![\w.])(\d{1,3}(?:[  ]\d{3})+(?:,\d+)?|\d+(?:,\d+)?)(?![.\d])\s?"
                   r"(%|п\.\s?п\.|процентн\w*\s+пункт\w*|раза?\b|млн|млрд|тыс\.?|мс\b|₽|руб\w*|коп\w*|\$|€|"
@@ -165,8 +166,11 @@ GLUED_STOP = r"|(?<=[^\W\d_]{3}[.!?…])(?=[A-ZА-ЯЁ])"
 
 
 def sentences(text):
-    parts = re.split(r"(?<=[.!?…])\s+(?=[«\"(A-ZА-ЯЁ])" + GLUED_STOP, " ".join(prose_lines(text)))
-    return [p for p in parts if len(p.split()) >= 2]
+    out = []
+    for block in re.split(r"\n\s*\n", strip_code(text)):
+        joined = " ".join(prose_lines(block))
+        out += re.split(r"(?<=[.!?…])\s+(?=[«\"(A-ZА-ЯЁ])|(?<=[.!?…][»\"])\s+(?=[«\"(A-ZА-ЯЁ])" + GLUED_STOP, joined)
+    return [p for p in out if len(p.split()) >= 2]
 
 
 def nwords(text):
@@ -204,14 +208,16 @@ def paragraphs(text):
 def summary_split(text):
     """Top summary = text before the first «## » heading if it has real prose, else the first ## section."""
     parts = re.split(r"(?m)^(?=## )", text)
-    if len(" ".join(prose_lines(parts[0])).split()) >= 40 or len(parts) < 2:
+    if len(parts) < 2:
+        return "", text
+    if len(" ".join(prose_lines(parts[0])).split()) >= 40:
         return parts[0], "".join(parts[1:])
     return parts[0] + parts[1], "".join(parts[2:])
 
 
 # Synonyms of one kind of link count as one word: «потому что» → «поэтому» is not a shift,
 # «помогает» → «связаны» is (an effect became a correlation).
-SAME = {"пото": "поэт", "из-з": "поэт", "благ": "поэт", "след": "поэт",
+SAME = {"ни": "не", "пото": "поэт", "из-з": "поэт", "благ": "поэт", "след": "поэт",
         "вызв": "влия", "прив": "влия", "помо": "влия", "пов": "влия", "объя": "влия"}
 
 
@@ -241,15 +247,18 @@ def stops_restored(src, new):
 
 
 def unglue_particles(text):
-    """«Было-бы» is a misspelt «было бы», not a new «бы»; «только-только» is still two «только»."""
+    """«Было-бы» is a misspelt «было бы», not a new «бы»; «только-только» is still two «только»;
+    «из за» is «из-за»."""
+    text = re.sub(r"(?<![\w-])из\s+за(?![\w-])", "из-за", text, flags=re.I)
     text = re.sub(r"(?<![\w-])(\w+)-(\1)(?![\w-])", r"\1 \2", text, flags=re.I)
     return re.sub(r"(?<=\w)-(?=(?:бы|ли|же)(?![\w-]))", " ", text, flags=re.I)
 
 
 def glued_negations(old, cur):
-    """«не велик» → «невелик» joins «не» to its word; the negation is still there."""
-    return sum(1 for w in re.findall(r"(?<![\w-])не\s+(\w+)", old, re.I)
-               if re.search(rf"(?<![\w-])не{re.escape(w)}(?!\w)", cur, re.I))
+    """Words that «не» was joined to: «не велик» → «невелик», «почти не возможно» → «почти невозможно»,
+    «ничего не делание» → «ничегонеделание». The negation and the word are both still there."""
+    return [w.lower() for w in re.findall(r"(?<![\w-])не\s+(\w+)", old, re.I)
+            if re.search(rf"не{re.escape(w)}(?!\w)", cur, re.I)]
 
 
 def markers(text):
@@ -339,10 +348,15 @@ def marker_shifts(src, new):
             minus = list((mo[k] - mn[k]).elements())
             if k in ("отрицание", "сужение") and op == "delete":
                 minus = []  # the whole sentence is gone, not flipped
+            glued = glued_negations(old, cur)
             if k == "отрицание":
-                for _ in range(glued_negations(old, cur)):
+                for _ in glued:
                     if "не" in minus:
                         minus.remove("не")
+            elif glued:
+                minus = [st for st in minus if st not in {stem(w) for w in glued}]
+            if k == "причина" and re.search(r"в\s+связи\s+с", old, re.I):
+                plus = [st for st in plus if st != "поэт"]
             if plus and direction in "+±":
                 where = around(cur, k, plus[0])
                 line = line_of(new, where) or line
