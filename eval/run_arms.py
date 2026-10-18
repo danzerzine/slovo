@@ -7,6 +7,7 @@
   humanize  — «перепиши по-человечески» без скилла (по желанию, --arms slovo,plain,humanize);
   slovo-<раздел> — скилл без одного раздела SKILL.md (проверка правил по одному, см. DROP);
   slovo-old — SKILL.md до уточнения глубины правки (44ae39f), для сравнения на других жанрах;
+  slovo-head — SKILL.md из последнего коммита: рабочая копия (slovo) против него;
   slovo-rep — полный скилл ещё раз: разброс между прогонами для сравнения с вкладом разделов;
   slovo_full — скилл с терминалом: модель сама запускает check.py и перечитывает отмеченное.
 
@@ -55,8 +56,9 @@ def skill_file(words, drop=None):
     f = tempfile.NamedTemporaryFile("w", suffix=".md", delete=False)
     for i, p in enumerate(parts):
         t = open(p).read()
-        if drop == "old" and i == 0:                       # SKILL.md до правки глубины (44ae39f)
-            t, drop = subprocess.run(["git", "-C", SKILL, "show", "44ae39f:slovo/SKILL.md"],
+        if drop in ("old", "head") and i == 0:            # old — до правки глубины (44ae39f), head — последний коммит
+            rev = "44ae39f" if drop == "old" else "HEAD"
+            t, drop = subprocess.run(["git", "-C", SKILL, "show", f"{rev}:slovo/SKILL.md"],
                                      capture_output=True, text=True, check=True).stdout, None
         f.write((without(t, DROP[drop]) if drop and i == 0 else t) + "\n\n")
     f.close()
