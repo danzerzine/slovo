@@ -70,12 +70,13 @@ def main():
     ap.add_argument("--judges", default="codex,gemini")
     ap.add_argument("--out", required=True)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--variants", default=",".join(VARIANTS), help="какие варианты показывать судье")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     work = tempfile.mkdtemp(prefix="slovo-judge-")
     for i in a.ids.split(","):
         src = open(f"{a.arms}/{i}.before.md").read().strip()
-        have = [v for v in VARIANTS if os.path.exists(f"{a.arms}/{i}.{v}.md")]
+        have = [v for v in a.variants.split(",") if os.path.exists(f"{a.arms}/{i}.{v}.md")]
         for judge in a.judges.split(","):
             path = f"{a.out}/{i}.{judge}.json"
             if os.path.exists(path):
@@ -83,7 +84,7 @@ def main():
             rng = random.Random(f"{a.seed}-{i}-{judge}")
             order = have[:]
             rng.shuffle(order)
-            letters = "ABCDE"[:len(order)]
+            letters = "ABCDEFGH"[:len(order)]
             blocks = "\n\n".join(f"ВАРИАНТ {l}:\n{open(f'{a.arms}/{i}.{v}.md').read().strip()}"
                                  for l, v in zip(letters, order))
             prompt = PROMPT.format(n=len(order), letters=", ".join(letters), source=src, blocks=blocks,

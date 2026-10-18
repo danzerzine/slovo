@@ -50,7 +50,7 @@ def main():
     for i in a.ids.split(","):
         src = open(f"{a.arms}/{i}.before.md").read()
         for f in sorted(os.listdir(a.arms)):
-            m = re.match(rf"{re.escape(i)}\.(\w+)\.md$", f)
+            m = re.match(rf"{re.escape(i)}\.([\w-]+)\.md$", f)
             if not m or m.group(1) == "before":
                 continue
             v = m.group(1)

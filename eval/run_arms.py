@@ -4,7 +4,10 @@
 Варианты:
   slovo     — модель с инструкцией slovo (SKILL.md, для текстов от 150 слов ещё reference.md);
   plain     — то же задание без скилла: проверка «скилл включён / выключен»;
-  humanize  — «перепиши по-человечески» без скилла (по желанию, --arms slovo,plain,humanize).
+  humanize  — «перепиши по-человечески» без скилла (по желанию, --arms slovo,plain,humanize);
+  slovo-<раздел> — скилл без одного раздела SKILL.md (проверка правил по одному, см. DROP);
+  slovo-old — SKILL.md до уточнения глубины правки (44ae39f), для сравнения на других жанрах;
+  slovo-rep — полный скилл ещё раз: разброс между прогонами для сравнения с вкладом разделов.
 
 Каждый запуск — `claude -p` из пустой папки, без пользовательских настроек и скиллов, без
 инструментов. Готовые файлы пропускаются, так что прогон можно прерывать и продолжать.
@@ -27,14 +30,31 @@ ASK = {
                 "Верни только готовый текст, без пояснений.",
 }
 
+DROP = {"norewrite": "## Переписать полностью", "nocheck": "## Проверка", "nogram": "## Грамотность",
+        "nodont": "## Не трогай", "noinv": "## Инварианты"}
 
-def skill_file(words):
+
+def without(text, heading):
+    out, skip = [], False
+    for line in text.splitlines(keepends=True):
+        if line.startswith("## "):
+            skip = line.startswith(heading)
+        if not skip:
+            out.append(line)
+    return "".join(out)
+
+
+def skill_file(words, drop=None):
     parts = [os.path.join(SKILL, "SKILL.md")]
     if words >= 150:
         parts.append(os.path.join(SKILL, "reference.md"))
     f = tempfile.NamedTemporaryFile("w", suffix=".md", delete=False)
-    for p in parts:
-        f.write(open(p).read() + "\n\n")
+    for i, p in enumerate(parts):
+        t = open(p).read()
+        if drop == "old" and i == 0:                       # SKILL.md до правки глубины (44ae39f)
+            t, drop = subprocess.run(["git", "-C", SKILL, "show", "44ae39f:slovo/SKILL.md"],
+                                     capture_output=True, text=True, check=True).stdout, None
+        f.write((without(t, DROP[drop]) if drop and i == 0 else t) + "\n\n")
     f.close()
     return f.name
 
@@ -44,9 +64,10 @@ def run(arm, text, model, workdir):
            "--disable-slash-commands", "--tools", ""]
     sf = None
     if arm.startswith("slovo"):                  # slovo2 — рабочая копия скилла против прежних ответов slovo
-        sf = skill_file(len(text.split()))
+        drop = arm.split("-", 1)[1] if "-" in arm else None
+        sf = skill_file(len(text.split()), None if drop == "rep" else drop)
         cmd += ["--append-system-prompt-file", sf]
-    prompt = ASK[arm] + "\n\n" + text                          # через stdin: --tools забирает позиционные слова
+    prompt = ASK[arm.split("-")[0]] + "\n\n" + text                          # через stdin: --tools забирает позиционные слова
     try:
         r = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True, input=prompt, timeout=300)
         return r.stdout.strip()
