@@ -20,7 +20,7 @@ import tempfile
 import urllib.request
 
 QWEN = os.environ.get("QWEN_URL", "http://localhost:11435/api/generate")
-VARIANTS = ["human", "slovo", "plain", "humanize"]
+VARIANTS = ["human", "slovo", "slovo2", "plain", "humanize"]
 PROMPT = """Ты оцениваешь редакторскую правку русского текста. Ниже ИСХОДНИК и {n} варианта правки под буквами {letters}. Кто и как правил, неизвестно.
 
 Оцени каждый вариант по двум осям.
@@ -83,7 +83,7 @@ def main():
             rng = random.Random(f"{a.seed}-{i}-{judge}")
             order = have[:]
             rng.shuffle(order)
-            letters = "ABCD"[:len(order)]
+            letters = "ABCDE"[:len(order)]
             blocks = "\n\n".join(f"ВАРИАНТ {l}:\n{open(f'{a.arms}/{i}.{v}.md').read().strip()}"
                                  for l, v in zip(letters, order))
             prompt = PROMPT.format(n=len(order), letters=", ".join(letters), source=src, blocks=blocks,

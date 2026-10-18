@@ -21,6 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.join(HERE, "..", "slovo")
 ASK = {
     "slovo": "Отредактируй этот текст по правилам из инструкции. Верни только готовый текст, без пояснений.",
+    "slovo2": "Отредактируй этот текст по правилам из инструкции. Верни только готовый текст, без пояснений.",
     "plain": "Отредактируй этот текст. Верни только готовый текст, без пояснений.",
     "humanize": "Перепиши этот текст по-человечески, без канцелярита и штампов, ничего не меняя по смыслу. "
                 "Верни только готовый текст, без пояснений.",
@@ -42,7 +43,7 @@ def run(arm, text, model, workdir):
     cmd = ["claude", "-p", "--model", model, "--no-session-persistence", "--setting-sources", "project",
            "--disable-slash-commands", "--tools", ""]
     sf = None
-    if arm == "slovo":
+    if arm.startswith("slovo"):                  # slovo2 — рабочая копия скилла против прежних ответов slovo
         sf = skill_file(len(text.split()))
         cmd += ["--append-system-prompt-file", sf]
     prompt = ASK[arm] + "\n\n" + text                          # через stdin: --tools забирает позиционные слова
