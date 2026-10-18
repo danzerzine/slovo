@@ -7,7 +7,8 @@
   humanize  — «перепиши по-человечески» без скилла (по желанию, --arms slovo,plain,humanize);
   slovo-<раздел> — скилл без одного раздела SKILL.md (проверка правил по одному, см. DROP);
   slovo-old — SKILL.md до уточнения глубины правки (44ae39f), для сравнения на других жанрах;
-  slovo-rep — полный скилл ещё раз: разброс между прогонами для сравнения с вкладом разделов.
+  slovo-rep — полный скилл ещё раз: разброс между прогонами для сравнения с вкладом разделов;
+  slovo_full — скилл с терминалом: модель сама запускает check.py и перечитывает отмеченное.
 
 Каждый запуск — `claude -p` из пустой папки, без пользовательских настроек и скиллов, без
 инструментов. Готовые файлы пропускаются, так что прогон можно прерывать и продолжать.
@@ -25,6 +26,9 @@ SKILL = os.path.join(HERE, "..", "slovo")
 ASK = {
     "slovo": "Отредактируй этот текст по правилам из инструкции. Верни только готовый текст, без пояснений.",
     "slovo2": "Отредактируй этот текст по правилам из инструкции. Верни только готовый текст, без пояснений.",
+    "slovo_full": "Отредактируй текст из файла source.md по правилам из инструкции, включая раздел «Проверка»: "
+                  "в терминале есть python3, папка скилла — {skill}. Готовую правку запиши в result.md, "
+                  "только текст, без пояснений.",
     "plain": "Отредактируй этот текст. Верни только готовый текст, без пояснений.",
     "humanize": "Перепиши этот текст по-человечески, без канцелярита и штампов, ничего не меняя по смыслу. "
                 "Верни только готовый текст, без пояснений.",
@@ -59,7 +63,26 @@ def skill_file(words, drop=None):
     return f.name
 
 
+def run_full(text, model):
+    """Скилл целиком: модель сама пишет файлы, запускает check.py и перечитывает отмеченные места."""
+    work = tempfile.mkdtemp(prefix="slovo-full-")
+    open(os.path.join(work, "source.md"), "w").write(text + "\n")
+    sf = skill_file(len(text.split()))
+    cmd = ["claude", "-p", "--model", model, "--no-session-persistence", "--setting-sources", "project",
+           "--disable-slash-commands", "--tools", "Bash,Read,Write,Edit",
+           "--allowedTools", "Bash(python3:*),Read,Write,Edit", "--append-system-prompt-file", sf]
+    prompt = ASK["slovo_full"].format(skill=os.path.abspath(SKILL))
+    try:
+        subprocess.run(cmd, cwd=work, capture_output=True, text=True, input=prompt, timeout=600)
+        out = os.path.join(work, "result.md")
+        return open(out).read().strip() if os.path.exists(out) else ""
+    finally:
+        os.unlink(sf)
+
+
 def run(arm, text, model, workdir):
+    if arm == "slovo_full":
+        return run_full(text, model)
     cmd = ["claude", "-p", "--model", model, "--no-session-persistence", "--setting-sources", "project",
            "--disable-slash-commands", "--tools", ""]
     sf = None

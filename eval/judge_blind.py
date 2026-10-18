@@ -20,7 +20,7 @@ import tempfile
 import urllib.request
 
 QWEN = os.environ.get("QWEN_URL", "http://localhost:11435/api/generate")
-VARIANTS = ["human", "slovo", "slovo2", "plain", "humanize"]
+VARIANTS = ["human", "slovo", "slovo2", "slovo_full", "plain", "humanize"]
 PROMPT = """Ты оцениваешь редакторскую правку русского текста. Ниже ИСХОДНИК и {n} варианта правки под буквами {letters}. Кто и как правил, неизвестно.
 
 Оцени каждый вариант по двум осям.
