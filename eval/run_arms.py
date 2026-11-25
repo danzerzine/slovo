@@ -54,13 +54,16 @@ def skill_file(words, drop=None):
     if words >= 150:
         parts.append(os.path.join(SKILL, "reference.md"))
     f = tempfile.NamedTemporaryFile("w", suffix=".md", delete=False)
+    rev = "44ae39f" if drop == "old" else ("HEAD" if drop == "head" else None)
     for i, p in enumerate(parts):
-        t = open(p).read()
-        if drop in ("old", "head") and i == 0:            # old — до правки глубины (44ae39f), head — последний коммит
-            rev = "44ae39f" if drop == "old" else "HEAD"
-            t, drop = subprocess.run(["git", "-C", SKILL, "show", f"{rev}:slovo/SKILL.md"],
-                                     capture_output=True, text=True, check=True).stdout, None
-        f.write((without(t, DROP[drop]) if drop and i == 0 else t) + "\n\n")
+        if rev:                                          # old — до правки глубины (44ae39f), head — последний коммит
+            t = subprocess.run(["git", "-C", SKILL, "show", f"{rev}:slovo/{os.path.basename(p)}"],
+                               capture_output=True, text=True, check=True).stdout
+        else:
+            t = open(p).read()
+            if drop and i == 0:
+                t = without(t, DROP[drop])
+        f.write(t + "\n\n")
     f.close()
     return f.name
 
@@ -75,7 +78,9 @@ def run_full(text, model):
            "--allowedTools", "Bash(python3:*),Read,Write,Edit", "--append-system-prompt-file", sf]
     prompt = ASK["slovo_full"].format(skill=os.path.abspath(SKILL))
     try:
-        subprocess.run(cmd, cwd=work, capture_output=True, text=True, input=prompt, timeout=600)
+        r = subprocess.run(cmd, cwd=work, capture_output=True, text=True, input=prompt, timeout=600)
+        if r.returncode != 0:
+            raise SystemExit(f"claude -p failed ({r.returncode}): {(r.stderr or r.stdout).strip()}")
         out = os.path.join(work, "result.md")
         return open(out).read().strip() if os.path.exists(out) else ""
     finally:
@@ -95,6 +100,8 @@ def run(arm, text, model, workdir):
     prompt = ASK[arm.split("-")[0]] + "\n\n" + text                          # через stdin: --tools забирает позиционные слова
     try:
         r = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True, input=prompt, timeout=300)
+        if r.returncode != 0:
+            raise SystemExit(f"claude -p failed ({r.returncode}): {(r.stderr or r.stdout).strip()}")
         return r.stdout.strip()
     finally:
         if sf:
